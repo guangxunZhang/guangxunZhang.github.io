@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guangxun Zhang</title>
+<meta name="description" content="Guangxun Zhang — undergraduate at NYU (Mathematics & Computer Science) working on generative models, flow matching, and robot learning.">
+<style>
+:root{--bg:#fbfaf7;--fg:#1c1c1e;--muted:#6b6b70;--accent:#5b2a86;--rule:#e4e1da;--chip:#efeae2}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--fg:#ebebee;--muted:#9a9aa2;--accent:#b892e0;--rule:#2b2b30;--chip:#232328}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:780px;margin:0 auto;padding:0 20px 80px}
+nav{display:flex;gap:18px;flex-wrap:wrap;padding:22px 0;font-size:15px;border-bottom:1px solid var(--rule)}
+nav a{color:var(--muted)}nav a:hover{color:var(--accent);text-decoration:none}
+header{display:flex;gap:32px;align-items:center;padding:44px 0 12px}
+header img{width:170px;height:170px;border-radius:50%;object-fit:cover;flex:none}
+h1{font-size:2.1rem;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 12px}
+.links a{margin-right:14px;font-size:15px}
+h2{font-size:1.25rem;margin:48px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--rule);letter-spacing:-.01em}
+.item{margin:0 0 20px}
+.row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.row b{font-weight:600}.date{color:var(--muted);font-size:15px;white-space:nowrap}
+.meta{color:var(--muted);font-size:15px}
+.item p{margin:4px 0 0;font-size:16px}
+.pub{margin:0 0 18px}
+.pub .t{font-weight:600}
+.pub .v{color:var(--muted);font-size:15px}
+.tag{display:inline-block;background:var(--chip);border-radius:4px;padding:0 7px;font-size:13px;margin-right:4px}
+.tag.hl{background:var(--accent);color:var(--bg)}
+.skills dt{font-weight:600;margin-top:10px}.skills dd{margin:0;color:var(--muted);font-size:16px}
+footer{margin-top:60px;color:var(--muted);font-size:14px}
+@media(max-width:600px){header{flex-direction:column;text-align:center;align-items:center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a href="#about">About</a><a href="#news">News</a><a href="#publications">Publications</a>
+  <a href="#awards">Awards</a><a href="#service">Service</a>
+</nav>
+
+<header id="about">
+  <img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang">
+  <div>
+    <h1>Guangxun Zhang</h1>
+    <p class="sub">Undergraduate, New York University<br>B.A. Honors Mathematics &amp; B.A. Honors Computer Science</p>
+    <div class="links">
+      <a href="mailto:gz2260@nyu.edu">Email</a>
+      <a href="assets/Guangxun_Zhang_CV.pdf">CV (PDF)</a>
+    </div>
+  </div>
+</header>
+
+<p>I am a senior at NYU (expected May 2027) studying Honors Mathematics and Computer Science. My research mainly focuses on generative modeling.</p>
+
+<h2 id="news">News</h2>
+<div class="item"><span class="date">Sep 2026</span> &nbsp;Our JIVE paper is available as an <a href="https://arxiv.org/abs/2609.33906">arXiv preprint</a> and has been submitted to ICLR 2027.</div>
+<div class="item"><span class="date">2026</span> &nbsp;Stable Mean Flow was selected as a <b>Highlight</b> at CVPR 2026 (top 2.8% of submissions).</div>
+<div class="item"><span class="date">2026</span> &nbsp;Contact-Anchored Policies accepted to Robotics: Science and Systems 2026.</div>
+<div class="item"><span class="date">2025&ndash;26</span> &nbsp;Received the NYU Computer Science Prize for Academic Excellence.</div>
+
+<h2 id="publications">Preprints</h2>
+<div class="pub">
+  <span class="tag">Submitted to ICLR 2027</span>
+  <div class="t">JIVE: Jacobian-Informed Volume Expansion for Diverse Generative Sampling</div>
+  <div><b>Guangxun Zhang</b>*, Brian Cai*, Boxuan Zhang, Chao Chen, Ruixiang Tang</div>
+  <div class="v">Submitted to ICLR 2027 &middot; <a href="https://arxiv.org/abs/2609.33906">[Preprint]</a> &middot; * equal contribution</div>
+</div>
+
+<h2>Selected Publications</h2>
+<div class="pub">
+  <span class="tag hl">CVPR 2026 Highlight</span>
+  <div class="t">Stable Mean Flow: Lyapunov-Inspired One-Step Flow Matching</div>
+  <div><b>Guangxun Zhang</b>, Mason Haberle, Davi Geiger</div>
+  <div class="v">CVPR 2026 &middot; top 2.8% of all submissions &middot; <a href="https://cvpr.thecvf.com/virtual/2026/poster/36747">[Paper]</a></div>
+</div>
+<div class="pub">
+  <span class="tag">RSS 2026</span>
+  <div class="t">Contact-Anchored Policies: Contact Conditioning Creates Strong Robot Utility Models</div>
+  <div>Zichen Jeff Cui, Omar Rayyan, Haritheja Etukuru, &hellip; <b>Guangxun Zhang</b>, &hellip; Lerrel Pinto, Nur Muhammad Mahi Shafiullah</div>
+  <div class="v">Robotics: Science and Systems 2026 &middot; <a href="https://cap-policy.github.io/">[Project]</a></div>
+</div>
+<div class="pub">
+  <span class="tag">NTCI 2025</span>
+  <div class="t">Multi-Scale Pyramid Feature Integration and Style-Mixing Contrastive Analysis for Robust Invasive Ductal Carcinoma Detection</div>
+  <div><b>Guangxun Zhang</b>, Xiaomei Wang</div>
+  <div class="v">NTCI 2025 &middot; <a href="https://ieeexplore.ieee.org/document/11308540">[Paper]</a></div>
+</div>
+
+<h2 id="awards">Awards &amp; Funding</h2>
+<div class="item"><div class="row"><b>Computer Science Prize for Academic Excellence</b><span class="date">2025&ndash;2026</span></div><div class="meta">Awarded to one student per year by the NYU Department of Computer Science.</div></div>
+<div class="item"><div class="row"><b>Presidential Honors Scholar</b><span class="date">2024, 2025, 2026</span></div><div class="meta">Top 10% of the entering first-year class.</div></div>
+<div class="item"><div class="row"><b>Summer Undergraduate Research Experience Grant ($4,400)</b><span class="date">2026</span></div><div class="meta">One of ~12&ndash;14 students annually in a competitive interdisciplinary mathematics research program.</div></div>
+<div class="item"><div class="row"><b>Dean's Undergraduate Research Fund Grant ($2,000)</b><span class="date">2025</span></div><div class="meta">For demonstrating the skills required to conduct an independent research project.</div></div>
+
+<h2 id="service">Service</h2>
+<div class="item"><div class="row"><b>Reviewer, International Conference on Learning Representations (ICLR)</b><span class="date">2027</span></div></div>
+
+<footer>&copy; 2026 Guangxun Zhang &middot; <a href="mailto:gz2260@nyu.edu">gz2260@nyu.edu</a></footer>
+</div>
+</body>
+</html>
