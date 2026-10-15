@@ -282,7 +282,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 
 <section id="travel" class="reveal">
   <h2>Travel</h2>
-  <div class="stats"><span><b>5</b>countries</span><span><b>22</b>cities</span></div>
+  <div class="stats"><span><b>5</b>countries</span><span><b>23</b>cities</span></div>
   <div class="stage">
     <div class="globe" id="globe"><canvas id="globe-c" role="img" aria-label="Interactive globe highlighting Japan, Thailand, Spain, China and the United States"></canvas></div>
     <div class="tip" id="globe-tip" aria-hidden="true"></div>
@@ -292,7 +292,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     <button class="trip" type="button" data-i="0" aria-pressed="false"><div class="tn">Japan<span>4 cities</span></div><div class="tc">Tokyo &middot; Kyoto &middot; Osaka &middot; Nara</div></button>
     <button class="trip" type="button" data-i="1" aria-pressed="false"><div class="tn">Thailand<span>2 cities</span></div><div class="tc">Bangkok &middot; Chiang Mai</div></button>
     <button class="trip" type="button" data-i="2" aria-pressed="false"><div class="tn">Spain<span>2 cities</span></div><div class="tc">Madrid &middot; Barcelona</div></button>
-    <button class="trip" type="button" data-i="3" aria-pressed="false"><div class="tn">China<span>6 cities</span></div><div class="tc">Beijing &middot; Shanghai &middot; Changsha &middot; Chengdu &middot; Qingdao &middot; Wuxi</div></button>
+    <button class="trip" type="button" data-i="3" aria-pressed="false"><div class="tn">China<span>7 cities</span></div><div class="tc">Beijing &middot; Shanghai &middot; Hong Kong &middot; Changsha &middot; Chengdu &middot; Qingdao &middot; Wuxi</div></button>
     <button class="trip" type="button" data-i="4" aria-pressed="false"><div class="tn">United States<span>8 cities</span></div><div class="tc">New York &middot; Los Angeles &middot; Las Vegas &middot; Miami &middot; Orlando &middot; Tampa &middot; Chicago &middot; Denver</div></button>
   </div>
 </section>
@@ -347,7 +347,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     {id:'392',c:[137.6,35.2],k:13,cities:[['Tokyo',139.69,35.68,'r'],['Kyoto',135.77,35.01,'t'],['Osaka',135.50,34.69,'l'],['Nara',135.80,34.69,'r']]},
     {id:'764',c:[100,16],k:6,cities:[['Bangkok',100.50,13.76,'r'],['Chiang Mai',98.98,18.79,'r']]},
     {id:'724',c:[-1.5,40.2],k:7.5,cities:[['Madrid',-3.70,40.42,'r'],['Barcelona',2.17,41.39,'r']]},
-    {id:'156',c:[113,33.5],k:3.2,cities:[['Beijing',116.41,39.90,'r'],['Shanghai',121.47,31.23,'r'],['Changsha',112.94,28.23,'r'],['Chengdu',104.07,30.57,'l'],['Qingdao',120.38,36.07,'r'],['Wuxi',120.31,31.49,'l']]},
+    {id:'156',ids:['156','158','344','446'],c:[113,31],k:3.2,cities:[['Beijing',116.41,39.90,'r'],['Shanghai',121.47,31.23,'r'],['Hong Kong',114.17,22.32,'r'],['Changsha',112.94,28.23,'r'],['Chengdu',104.07,30.57,'l'],['Qingdao',120.38,36.07,'r'],['Wuxi',120.31,31.49,'l']]},
     {id:'840',c:[-96,37],k:2.2,cities:[['New York',-74.01,40.71,'r'],['Los Angeles',-118.24,34.05,'l'],['Las Vegas',-115.14,36.17,'r'],['Miami',-80.19,25.76,'r'],['Orlando',-81.38,28.54,'r'],['Tampa',-82.46,27.95,'l'],['Chicago',-87.63,41.88,'r'],['Denver',-104.99,39.74,'r']]}
   ];
   var el=document.getElementById('globe'),cv=document.getElementById('globe-c'),tip=document.getElementById('globe-tip');
@@ -361,9 +361,12 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   var lo=null,hi=null,hiReq=false,C={},size=0,dpr=1,dirty=true;
   var lam=-110,phi=-22,k=1,focus=-1,tw=null,drag=null,resumeAt=0,raf=0,last=0,pts=[],hover=null;
 
+  // countries drawn as one region (China incl. Taiwan, Hong Kong, Macao) share a group: no borders between them
+  var GROUP={};TRIPS.forEach(function(t){(t.ids||[t.id]).forEach(function(id){GROUP[id]=t.id})});
+  function grp(g){return GROUP[g.id]||g.id}
   function prep(t){
     var by={};topojson.feature(t,t.objects.countries).features.forEach(function(f){by[f.id]=f});
-    return {land:topojson.feature(t,t.objects.land),borders:topojson.mesh(t,t.objects.countries,function(a,b){return a!==b}),c:by};
+    return {land:topojson.feature(t,t.objects.land),borders:topojson.mesh(t,t.objects.countries,function(a,b){return grp(a)!==grp(b)}),c:by};
   }
   function load(file){return fetch(ATLAS+file).then(function(r){return r.json()}).then(prep)}
   function colors(){
@@ -387,8 +390,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     ctx.beginPath();path(w.land);ctx.fillStyle=C.land;ctx.fill();
     ctx.fillStyle=C.visited;
     TRIPS.forEach(function(t,i){
-      var f=w.c[t.id];if(!f)return;
-      ctx.globalAlpha=focus<0||focus===i?.92:.4;ctx.beginPath();path(f);ctx.fill();
+      ctx.globalAlpha=focus<0||focus===i?.92:.4;ctx.beginPath();
+      (t.ids||[t.id]).forEach(function(id){if(w.c[id])path(w.c[id])});
+      ctx.fill();
     });
     ctx.globalAlpha=1;
     ctx.beginPath();path(w.borders);ctx.strokeStyle=C.border;ctx.lineWidth=.6;ctx.stroke();
