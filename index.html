@@ -427,7 +427,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     c.style.setProperty('--mx',(e.clientX-b.left)+'px');c.style.setProperty('--my',(e.clientY-b.top)+'px');
   },{passive:true});
 
-  // glyph field: a static grid of monospace characters with soft noise patches;
+  // glyph field: a grid of monospace characters with soft noise patches; a few characters swap at random over time;
   // clicking the background sends out a ring that lights the characters up as it spreads, then fades
   (function(){
     var gc=document.getElementById('glyphs');if(!gc)return;
@@ -489,6 +489,12 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       raf=rings.length?requestAnimationFrame(loop):0;
     }
     size();
+    // slowly swap a small share of characters so the field feels alive without flickering
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches)setInterval(function(){
+      if(document.hidden)return;
+      for(var k=Math.ceil(cells.length*.008);k--;)cells[Math.random()*cells.length|0]=Math.random()*CH.length|0;
+      if(!raf)draw(performance.now());
+    },180);
     var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,120)});
     new MutationObserver(function(){buildAtlas();draw(performance.now())}).observe(root,{attributes:true,attributeFilter:['data-theme']});
     document.addEventListener('click',function(e){
