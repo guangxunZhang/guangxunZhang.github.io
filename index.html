@@ -74,12 +74,16 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 
 
 /* hero */
-.hero{display:grid;grid-template-columns:220px 1fr;gap:48px;align-items:center;padding:56px 0 40px}
+.hero{display:grid;grid-template-columns:290px 1fr;gap:44px;align-items:center;padding:56px 0 40px}
 .photo{position:relative}
 .photo::before{content:"";position:absolute;inset:14px -14px -14px 14px;border-radius:18px;background:var(--grad);opacity:.28;z-index:-1;transition:transform .5s cubic-bezier(.2,.7,.2,1),opacity .5s}
 .photo::after{content:"";position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);pointer-events:none}
 .photo:hover::before{transform:translate(-6px,-6px);opacity:.42}
-.photo img{display:block;width:100%;height:auto;aspect-ratio:612/900;object-fit:cover;border-radius:16px;box-shadow:0 24px 50px -20px color-mix(in srgb,var(--accent) 55%,transparent),var(--shadow)}
+.photo img{display:block;width:100%;height:auto;aspect-ratio:612/900;object-fit:cover;border-radius:16px;box-shadow:0 24px 50px -20px color-mix(in srgb,var(--accent) 55%,transparent),var(--shadow);transition:opacity .8s ease}
+/* flow matching intro: particles flow from a Gaussian to the photo's pixels, then the photo fades in */
+.js .photo:not(.fm-done) img{opacity:0}
+.photo .fm{position:absolute;inset:0;width:100%;height:100%;border-radius:16px;pointer-events:none;background:color-mix(in srgb,var(--accent-soft) 60%,transparent);transition:opacity .8s ease}
+.photo.fm-done .fm{opacity:0}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;padding:4px 12px 4px 10px;border-radius:999px;background:color-mix(in srgb,var(--surface) 70%,transparent);border:1px solid color-mix(in srgb,var(--accent) 22%,var(--rule));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--grad);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.6rem,6vw,3.7rem);line-height:1.05;letter-spacing:-.025em;margin:0 0 12px;background:linear-gradient(100deg,var(--fg) 35%,var(--accent) 75%,var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:.06em}
@@ -205,7 +209,7 @@ footer .top:hover{color:var(--accent)}
   nav a[href="#about"]{display:none}
   .wrap{padding:0 16px 48px}
   .hero{grid-template-columns:1fr;gap:28px;padding:32px 0 24px;text-align:center}
-  .photo{width:180px;margin:0 auto}
+  .photo{width:220px;margin:0 auto}
   .interests,.links{justify-content:center}
   .news::before{left:6px}
   .news li{grid-template-columns:1fr;gap:0;padding-left:26px}
@@ -224,6 +228,8 @@ footer .top:hover{color:var(--accent)}
 </style>
 <script>
 document.documentElement.classList.add('js');
+// never leave the photo hidden if the flow-matching intro can't run
+setTimeout(function(){var p=document.getElementById('photo');if(p)p.classList.add('fm-done')},6000);
 try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}
 </script>
 </head>
@@ -249,7 +255,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 <div class="wrap" id="top">
 
 <header class="hero" id="about">
-  <div class="photo"><img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"></div>
+  <div class="photo" id="photo" title="Click to replay"><img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
   <div>
     <p class="eyebrow">Mathematics &amp; Computer Science &middot; NYU</p>
     <h1>Guangxun Zhang</h1>
@@ -504,6 +510,78 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       rings.push({x:e.clientX,y:e.clientY,t:performance.now()});
       if(!raf)raf=requestAnimationFrame(loop);
     });
+  })();
+
+  // flow matching intro: each pixel of the photo is a sample x1; it starts as Gaussian noise x0 and follows
+  // a gently curved probability path x_t toward x1, so the portrait is "generated" from noise
+  (function(){
+    var ph=document.getElementById('photo'),fc=document.getElementById('fm');if(!ph||!fc)return;
+    var img=ph.querySelector('img'),done=function(){ph.classList.add('fm-done')};
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){done();return}
+    var fx=fc.getContext('2d'),buf=document.createElement('canvas'),bx=buf.getContext('2d');
+    var STEP=4,DOT=3,DUR=1900,LAG=350,P=[],trails=[],W,H,dpr,data,raf=0,t0=0,acc;
+    function randn(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(TAU*Math.random())}
+    var TAU=Math.PI*2;
+    function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+    function setup(){
+      W=fc.clientWidth;H=fc.clientHeight;if(!W||!H)return false;
+      dpr=Math.min(2,devicePixelRatio||1);
+      fc.width=buf.width=Math.round(W*dpr);fc.height=buf.height=Math.round(H*dpr);
+      var cols=Math.floor(W/STEP),rows=Math.floor(H/STEP),sm=document.createElement('canvas'),sx=sm.getContext('2d');
+      sm.width=cols;sm.height=rows;sx.drawImage(img,0,0,cols,rows);
+      var px;try{px=sx.getImageData(0,0,cols,rows).data}catch(e){return false}// tainted canvas (e.g. file://)
+      var cs=getComputedStyle(document.documentElement);
+      acc=(cs.getPropertyValue('--accent').trim().match(/[0-9a-f]{2}/gi)||['57','06','8c']).map(function(h){return parseInt(h,16)});
+      var cx=W/2,cy=H*.48,sig=W*.12;
+      P=[];
+      for(var y=0;y<rows;y++)for(var x=0;x<cols;x++){
+        var i=(y*cols+x)*4,u=(x+.5)/cols*2-1,v=(y+.5)/rows*2-1;
+        // a smooth (near-monotone) coupling of noise to pixels keeps the paths coherent, like a learned flow
+        var x0=cx+sig*(Math.atanh(u*.97)*.55+randn()*.45),y0=cy+sig*(Math.atanh(v*.97)*.55+randn()*.45);
+        var x1=(x+.5)*STEP,y1=(y+.5)*STEP,dx=x1-x0,dy=y1-y0;
+        P.push({x0:x0,y0:y0,x1:x1,y1:y1,bx:-dy*.22,by:dx*.22,d:Math.random()*LAG,r:px[i],g:px[i+1],b:px[i+2]});
+      }
+      trails=[];for(var k=0;k<70;k++)trails.push(P[Math.random()*P.length|0]);
+      data=bx.createImageData(buf.width,buf.height);
+      return true;
+    }
+    function pos(p,t){var e=ease(t),c=e*(1-e)*4;return[p.x0+(p.x1-p.x0)*e+p.bx*c,p.y0+(p.y1-p.y0)*e+p.by*c]}
+    function frame(now){
+      var T=now-t0,d=data.data,bw=buf.width,bh=buf.height,s=Math.round(DOT*dpr);
+      d.fill(0);
+      for(var n=0;n<P.length;n++){
+        var p=P[n],t=Math.min(1,Math.max(0,(T-p.d)/DUR)),q=pos(p,t),m=Math.min(1,t*1.4);
+        var X=Math.round(q[0]*dpr-s/2),Y=Math.round(q[1]*dpr-s/2);
+        var r=acc[0]+(p.r-acc[0])*m,g=acc[1]+(p.g-acc[1])*m,b=acc[2]+(p.b-acc[2])*m;
+        for(var yy=Math.max(0,Y);yy<Math.min(bh,Y+s);yy++)for(var xx=Math.max(0,X);xx<Math.min(bw,X+s);xx++){
+          var o=(yy*bw+xx)*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255;
+        }
+      }
+      bx.putImageData(data,0,0);
+      fx.setTransform(dpr,0,0,dpr,0,0);fx.clearRect(0,0,W,H);
+      var k=Math.min(1,T/(DUR+LAG)),fade=1-k;
+      // source density: contour rings of the Gaussian, fading as mass flows out
+      fx.strokeStyle='rgba('+acc+','+(.35*fade).toFixed(3)+')';fx.lineWidth=1;
+      for(var j=1;j<=4;j++){fx.beginPath();fx.arc(W/2,H*.48,W*.12*j*.55,0,TAU);fx.stroke()}
+      fx.setTransform(1,0,0,1,0,0);fx.drawImage(buf,0,0);
+      fx.setTransform(dpr,0,0,dpr,0,0);
+      // a few sample trajectories over the particles, drawn up to the current time
+      fx.strokeStyle='rgba(60,50,80,'+(.4*(1-k*k)).toFixed(3)+')';
+      for(j=0;j<trails.length;j++){
+        var tp=trails[j],tt=Math.min(1,Math.max(0,(T-tp.d)/DUR));if(!tt)continue;
+        fx.beginPath();for(var st=0;st<=16;st++){var w=pos(tp,tt*st/16);st?fx.lineTo(w[0],w[1]):fx.moveTo(w[0],w[1])}fx.stroke();
+      }
+      fx.font='11px ui-monospace,"SF Mono",Menlo,monospace';fx.fillStyle='rgba(120,110,140,.85)';
+      fx.fillText('t = '+k.toFixed(2),10,H-10);
+      if(T<DUR+LAG){raf=requestAnimationFrame(frame);return}
+      raf=0;done();
+    }
+    function play(){
+      if(raf||!setup()){if(!raf)done();return}
+      ph.classList.remove('fm-done');t0=performance.now();raf=requestAnimationFrame(frame);
+    }
+    (img.decode?img.decode():Promise.resolve()).then(function(){if(!ph.classList.contains('fm-done'))play()},done);
+    ph.addEventListener('click',function(){if(ph.classList.contains('fm-done'))play()});
   })();
 
   // count-up stats
