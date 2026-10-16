@@ -429,16 +429,16 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   },{passive:true});
 
   // click ripples: the background behaves like a water surface (damped 2D wave equation)
-  var rc=document.getElementById('ripples'),rx=rc.getContext('2d'),CELL=4,SPONGE=10;
+  var rc=document.getElementById('ripples'),rx=rc.getContext('2d'),CELL=4,SPONGE=10,DAMP=.95;
   var gw,gh,cur,prev,damp,img,px,rafId=0,srcs=[],hi=[255,255,255],lo=[0,0,0];
   function sizeRipples(){
     gw=Math.ceil(innerWidth/CELL)+2;gh=Math.ceil(innerHeight/CELL)+2;
     rc.width=gw;rc.height=gh;rc.style.width=gw*CELL+'px';rc.style.height=gh*CELL+'px';
     cur=new Float32Array(gw*gh);prev=new Float32Array(gw*gh);damp=new Float32Array(gw*gh);
-    // gentle base damping, stronger near the edges so waves fade out instead of bouncing back
+    // damping keeps each ripple local (~180px); stronger near the edges so waves fade out instead of bouncing back
     for(var y=0;y<gh;y++)for(var x=0;x<gw;x++){
       var d=Math.min(x,y,gw-1-x,gh-1-y),t=d<SPONGE?d/SPONGE:1;
-      damp[y*gw+x]=.986*(.9+.1*t);
+      damp[y*gw+x]=DAMP*(.9+.1*t);
     }
     img=rx.createImageData(gw,gh);px=new Uint32Array(img.data.buffer);
   }
@@ -457,20 +457,20 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var s=(cur[i-1]-cur[i+1])+(cur[i-gw]-cur[i+gw]),c,a;
       if(s>0){c=hi;a=s*6}else{c=lo;a=-s*4.5}
       if(a<1){px[i]=0;continue}
-      if(a>170)a=170;a|=0;
+      if(a>140)a=140;a|=0;
       px[i]=le?(a<<24|c[2]<<16|c[1]<<8|c[0])>>>0:(c[0]<<24|c[1]<<16|c[2]<<8|a)>>>0;
     }
     rx.putImageData(img,0,0);
     return peak;
   }
   // an impact bobs the surface a few times, sending out a train of concentric crests
-  var PULSE=[[0,-1],[5,.7],[10,-.45],[15,.25]];
+  var PULSE=[[0,-1],[8,.7],[16,-.45],[24,.25]];
   function loop(){
     srcs=srcs.filter(function(o){
       PULSE.forEach(function(q){if(q[0]===o.t)drop(o.x,o.y,4,o.amp*q[1])});
       return ++o.t<=PULSE[PULSE.length-1][0];
     });
-    step();step();
+    step();
     if(!srcs.length&&render()<.6){cur.fill(0);prev.fill(0);rx.clearRect(0,0,gw,gh);rafId=0;return}
     if(srcs.length)render();
     rafId=requestAnimationFrame(loop);
@@ -488,7 +488,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     var sel=getSelection&&getSelection();if(sel&&!sel.isCollapsed)return;
     var cs=getComputedStyle(root);
     hi=rgb(cs.getPropertyValue('--wave-hi'),hi);lo=rgb(cs.getPropertyValue('--wave-lo'),lo);
-    srcs.push({x:Math.round(e.clientX/CELL)+1,y:Math.round(e.clientY/CELL)+1,amp:90,t:0});
+    srcs.push({x:Math.round(e.clientX/CELL)+1,y:Math.round(e.clientY/CELL)+1,amp:110,t:0});
     if(!rafId)rafId=requestAnimationFrame(loop);
   });
 
