@@ -85,8 +85,13 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 .photo .fm{position:absolute;inset:0;width:100%;height:100%;border-radius:16px;pointer-events:none;background:color-mix(in srgb,var(--accent-soft) 60%,transparent);transition:opacity .8s ease}
 .photo.fm-done .fm{opacity:0}
 /* t slider: scrub the flow from pure noise (t=0) to the photo (t=1) */
-.fm-ctl{display:flex;align-items:center;gap:10px;margin-top:30px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
-.fm-ctl[hidden]{display:none}
+/* distribution panel: p (noise) -> p_t -> q (data), with the current image as one sample x_t */
+.fm-viz{margin-top:30px}
+.fm-viz[hidden]{display:none}
+.fm-dist{display:block;width:100%;height:110px;border-radius:12px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule)}
+.fm-cap{margin:10px 0 0;min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.fm-cap i{font-family:var(--serif);font-size:1.1em}
+.fm-ctl{display:flex;align-items:center;gap:10px;margin-top:14px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
 .fm-ctl input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:4px;margin:0;border-radius:99px;cursor:pointer;background:linear-gradient(90deg,var(--accent) var(--p,100%),var(--rule) var(--p,100%))}
 .fm-ctl input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);box-shadow:var(--shadow);transition:transform .15s}
 .fm-ctl input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);box-shadow:var(--shadow)}
@@ -265,7 +270,11 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 <header class="hero" id="about">
   <div class="photo-col">
     <div class="photo" id="photo" title="Click to replay"><img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
-    <label class="fm-ctl" id="fm-ctl" hidden><span title="t = 0: pure Gaussian noise">N(0,I)</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to photo"><span title="t = 1: the photo">photo</span></label>
+    <div class="fm-viz" id="fm-viz" hidden>
+      <canvas class="fm-dist" id="fm-dist" aria-hidden="true"></canvas>
+      <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to photo"><span title="the photo">t = 1</span></label>
+      <p class="fm-cap" id="fm-cap"></p>
+    </div>
   </div>
   <div>
     <p class="eyebrow">Mathematics &amp; Computer Science &middot; NYU</p>
@@ -516,7 +525,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     new MutationObserver(function(){buildAtlas();draw(performance.now())}).observe(root,{attributes:true,attributeFilter:['data-theme']});
     document.addEventListener('click',function(e){
       if(e.button!==0||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-      if(e.target.closest('a,button,video,canvas,input,textarea,select,label,summary,[role="button"],.bar,.pub,.trip,.theater,.globe,.photo,.fm-ctl'))return;
+      if(e.target.closest('a,button,video,canvas,input,textarea,select,label,summary,[role="button"],.bar,.pub,.trip,.theater,.globe,.photo,.fm-viz'))return;
       var sel=getSelection&&getSelection();if(sel&&!sel.isCollapsed)return;
       rings.push({x:e.clientX,y:e.clientY,t:performance.now()});
       if(!raf)raf=requestAnimationFrame(loop);
@@ -529,11 +538,11 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   // The slider under the photo scrubs t by hand.
   (function(){
     var ph=document.getElementById('photo'),fc=document.getElementById('fm');if(!ph||!fc)return;
-    var img=ph.querySelector('img'),ctl=document.getElementById('fm-ctl'),sl=document.getElementById('fm-t');
+    var img=ph.querySelector('img'),ctl=document.getElementById('fm-viz'),sl=document.getElementById('fm-t');
     var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
     var fx=fc.getContext('2d'),buf=document.createElement('canvas'),bx=buf.getContext('2d');
     var DUR=2600,BLURS=[0,1,2,4,8,16],W=0,H,N,eps,lv,out,raf=0,t0=0,ready=false;
-    function done(){ph.classList.add('fm-done');setSlider(1)}
+    function done(){ph.classList.add('fm-done');setSlider(1);if(ready)drawDist(1)}
     function setSlider(k){if(sl){sl.value=Math.round(k*1000);sl.style.setProperty('--p',k*100+'%')}}
     function randn(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
     // separable box blur, three passes ~ Gaussian with sigma ~ r; edges clamp
@@ -586,7 +595,93 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       fx.fillStyle='rgba(20,16,28,.55)';fx.beginPath();
       if(fx.roundRect)fx.roundRect(8,H-26,tw+14,18,9);else fx.rect(8,H-26,tw+14,18);
       fx.fill();fx.fillStyle='#fff';fx.fillText(label,15,H-13);
-      setSlider(t);
+      setSlider(t);drawDist(t);
+    }
+    // distribution panel: with x_t = t*x1 + (1-t)*x0, x0 ~ p = N(mu0, s0^2 I) and x1 ~ q (a 2-component
+    // Gaussian mixture), the marginal p_t is exactly a mixture with means (1-t)mu0 + t*mu_k and covariances
+    // (1-t)^2 s0^2 I + t^2 Sigma_k, so the contours below are the true probability path, not a sketch
+    var dc=document.getElementById('fm-dist'),cap=document.getElementById('fm-cap');
+    var dx=dc&&dc.getContext('2d'),dl=document.createElement('canvas'),dlx=dl.getContext('2d'),ghost=document.createElement('canvas');
+    var DW=0,DH=0,ddpr=1,dimg,dens,col,capKey='',LEVELS=[.1,.24,.4,.56,.72,.88];
+    function geo(){
+      var s0=DH*.13,Q=[[.8,.36,DH*.15,DH*.055,1.1,.4],[.86,.66,DH*.12,DH*.075,-.6,.6]];
+      return{mu0:[DW*.15,DH*.56],s0:s0,q:Q.map(function(c){
+        var cs=Math.cos(c[4]),sn=Math.sin(c[4]),a=c[2]*c[2],b=c[3]*c[3];
+        return{m:[DW*c[0],DH*c[1]],xx:a*cs*cs+b*sn*sn,yy:a*sn*sn+b*cs*cs,xy:(a-b)*cs*sn,w:c[5]};
+      })};
+    }
+    // mixture components of p_t (t=0 gives p, t=1 gives q)
+    function comps(G,t){
+      var v=(1-t)*(1-t)*G.s0*G.s0;
+      return G.q.map(function(c){
+        var xx=t*t*c.xx+v,yy=t*t*c.yy+v,xy=t*t*c.xy,det=xx*yy-xy*xy;
+        return{mx:(1-t)*G.mu0[0]+t*c.m[0],my:(1-t)*G.mu0[1]+t*c.m[1],ixx:yy/det,iyy:xx/det,ixy:-xy/det,k:c.w/Math.sqrt(det)};
+      });
+    }
+    // rasterise a density as banded fills with darker band edges, like a filled contour plot
+    function contours(C,ctx,fill,line){
+      var w=dl.width,h=dl.height,max=0,i,x,y;
+      for(y=0,i=0;y<h;y++)for(x=0;x<w;x++,i++){
+        var X=(x+.5)/ddpr,Y=(y+.5)/ddpr,d=0;
+        for(var c=0;c<C.length;c++){var o=C[c],ex=X-o.mx,ey=Y-o.my;d+=o.k*Math.exp(-.5*(ex*ex*o.ixx+2*ex*ey*o.ixy+ey*ey*o.iyy))}
+        dens[i]=d;if(d>max)max=d;
+      }
+      for(i=0;i<dens.length;i++){var l=0,r=dens[i]/max;while(l<LEVELS.length&&r>=LEVELS[l])l++;dens[i]=l}
+      var D=dimg.data;
+      for(y=0,i=0;y<h;y++)for(x=0;x<w;x++,i++){
+        var L=dens[i],edge=L>0&&((x+1<w&&dens[i+1]!==L)||(y+1<h&&dens[i+w]!==L)||(x>0&&dens[i-1]<L)||(y>0&&dens[i-w]<L)),o4=i*4;
+        D[o4]=col[0];D[o4+1]=col[1];D[o4+2]=col[2];
+        D[o4+3]=edge?line*(.55+L*.07)*255:L?fill*L/LEVELS.length*255:0;
+      }
+      dlx.putImageData(dimg,0,0);ctx.drawImage(dl,0,0);
+    }
+    function sizeDist(){
+      var w=dc.clientWidth,h=dc.clientHeight;
+      if(w===DW&&h===DH&&dimg)return;
+      DW=w;DH=h;ddpr=Math.min(2,devicePixelRatio||1);
+      dc.width=dl.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=ghost.height=Math.round(h*ddpr);
+      dimg=dlx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
+    }
+    function label(txt,sub,x,y,a){
+      dx.globalAlpha=a;dx.font='italic 15px Newsreader,Georgia,serif';dx.textAlign='center';
+      var w=dx.measureText(txt).width;dx.fillText(txt,x-(sub?3:0),y);
+      if(sub){dx.font='italic 10.5px Newsreader,Georgia,serif';dx.fillText(sub,x-3+w/2+3,y+3)}
+      dx.globalAlpha=1;
+    }
+    function drawDist(t){
+      if(!dc||!dc.clientWidth)return;
+      sizeDist();
+      var cs=getComputedStyle(document.documentElement),c=(cs.getPropertyValue('--accent').trim().match(/[0-9a-f]{2}/gi)||['57','06','8c']).map(function(h){return parseInt(h,16)});
+      var fg=cs.getPropertyValue('--fg').trim()||'#1b1a1f',G=geo();
+      if(!col||col.join()!==c.join()){
+        // faint outlines of p and q stay put as reference points
+        col=c;var gx2=ghost.getContext('2d');gx2.clearRect(0,0,ghost.width,ghost.height);
+        gx2.globalAlpha=.35;contours(comps(G,0),gx2,0,1);contours(comps(G,1),gx2,0,1);gx2.globalAlpha=1;
+      }
+      dx.setTransform(1,0,0,1,0,0);dx.clearRect(0,0,dc.width,dc.height);dx.drawImage(ghost,0,0);
+      contours(comps(G,t),dx,.5,1);
+      dx.setTransform(ddpr,0,0,ddpr,0,0);dx.fillStyle=fg;
+      label('p','',G.mu0[0],15,.9);label('q','',DW*.83,15,.9);
+      var mx=(1-t)*G.mu0[0]+t*(G.q[0].m[0]*G.q[0].w+G.q[1].m[0]*G.q[1].w);
+      if(t>.14&&t<.86)label('p','t',mx,15,Math.min(1,Math.min(t-.14,.86-t)*8));
+      // one fixed pair (x0, x1): x_t on the straight line between them is a sample of p_t, and it is this image
+      var a0=[G.mu0[0]+G.s0*.5,G.mu0[1]+G.s0*.55],a1=[G.q[1].m[0]-G.s0*.25,G.q[1].m[1]+G.s0*.15];
+      var px=a0[0]+(a1[0]-a0[0])*t,py=a0[1]+(a1[1]-a0[1])*t;
+      dx.strokeStyle=fg;dx.globalAlpha=.45;dx.setLineDash([2,3]);dx.lineWidth=1;
+      dx.beginPath();dx.moveTo(a0[0],a0[1]);dx.lineTo(px,py);dx.stroke();dx.setLineDash([]);dx.globalAlpha=1;
+      var tw=17,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
+      dx.globalAlpha=.6;dx.beginPath();dx.moveTo(tx+tw,ty+th);dx.lineTo(px,py);dx.stroke();dx.globalAlpha=1;
+      dx.drawImage(t>=1?img:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
+      dx.beginPath();dx.arc(px,py,3.2,0,Math.PI*2);dx.fill();
+      dx.beginPath();dx.arc(px,py,5.5,0,Math.PI*2);dx.strokeStyle='rgba('+c+',.8)';dx.stroke();
+      // say it in words, too
+      var key=t<=0?'0':t>=1?'1':'t';
+      if(cap&&key!==capKey){
+        capKey=key;
+        cap.innerHTML=key==='0'?'This image is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise.'
+          :key==='1'?'This image is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution.'
+          :'This image is one sample <i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>; as <i>t</i> grows, <i>p<sub>t</sub></i> flows from <i>p</i> to <i>q</i>.';
+      }
     }
     function ensure(){if(!ready||fc.clientWidth!==W)ready=setup();return ready}
     function ease(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
@@ -601,10 +696,12 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     }
     (img.decode?img.decode():Promise.resolve()).then(function(){
       if(!ensure()){done();return}
-      ph.dataset.fm='on';if(ctl)ctl.hidden=false;
+      ph.dataset.fm='on';if(ctl)ctl.hidden=false;drawDist(0);
       if(RM||ph.classList.contains('fm-done'))done();else play();
     },done);
     ph.addEventListener('click',function(){if(!RM&&ph.classList.contains('fm-done'))play()});
+    new MutationObserver(function(){if(ready)drawDist(sl?sl.value/1000:1)}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+    addEventListener('resize',function(){if(ready)drawDist(sl?sl.value/1000:1)});
     // scrubbing stops the intro; t=1 hands back to the real photo
     if(sl)sl.addEventListener('input',function(){
       if(raf){cancelAnimationFrame(raf);raf=0}
