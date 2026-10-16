@@ -17,7 +17,7 @@
   --bg:#fbfaf8;--surface:#ffffff;--fg:#1b1a1f;--muted:#68666f;--faint:#9a98a1;
   --accent:#57068c;--accent-2:#7b3fb5;--accent-soft:#f3ecf9;--rule:#e8e5ee;--shadow:0 1px 2px rgba(30,20,50,.04),0 4px 16px rgba(30,20,50,.05);
   --g-ocean:#e6e0f0;--g-ocean-hi:#f6f3fa;--g-land:#fdfcfb;--g-border:#cfc7dc;--g-grid:rgba(87,6,140,.08);--g-visited:#57068c;--g-dot:#f2701d;--g-halo:#fbfaf8;
-  --grad:linear-gradient(115deg,#57068c,#8a3ffc 55%,#e0699b);--aura-1:rgba(138,63,252,.22);--aura-2:rgba(242,112,29,.13);--aura-3:rgba(87,6,140,.14);--dotgrid:rgba(87,6,140,.10);--wave-hi:255,255,255;--wave-lo:87,6,140;--glyph-dim:118,108,150;--glyph-hi:98,60,235;
+  --grad:linear-gradient(115deg,#57068c,#8a3ffc 55%,#e0699b);--aura-1:rgba(138,63,252,.22);--aura-2:rgba(242,112,29,.13);--aura-3:rgba(87,6,140,.14);--dotgrid:rgba(87,6,140,.10);--glyph-dim:118,108,150;--glyph-hi:98,60,235;
   --serif:"Newsreader",Georgia,"Times New Roman",serif;
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
@@ -25,13 +25,13 @@
   --bg:#121116;--surface:#1a1920;--fg:#ecebf0;--muted:#a3a1ab;--faint:#75737d;
   --accent:#c49bf0;--accent-2:#d9bcf7;--accent-soft:#2a2135;--rule:#2a2832;--shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
   --g-ocean:#16141d;--g-ocean-hi:#262234;--g-land:#3a3546;--g-border:#57506a;--g-grid:rgba(196,155,240,.09);--g-visited:#c49bf0;--g-dot:#ffaa55;--g-halo:#121116;
-  --grad:linear-gradient(115deg,#c49bf0,#8fb4ff 55%,#ffaa55);--aura-1:rgba(138,63,252,.26);--aura-2:rgba(255,170,85,.10);--aura-3:rgba(80,120,255,.14);--dotgrid:rgba(196,155,240,.08);--wave-hi:226,206,255;--wave-lo:0,0,0;--glyph-dim:150,142,178;--glyph-hi:178,150,255;
+  --grad:linear-gradient(115deg,#c49bf0,#8fb4ff 55%,#ffaa55);--aura-1:rgba(138,63,252,.26);--aura-2:rgba(255,170,85,.10);--aura-3:rgba(80,120,255,.14);--dotgrid:rgba(196,155,240,.08);--glyph-dim:150,142,178;--glyph-hi:178,150,255;
 }}
 :root[data-theme="dark"]{
   --bg:#121116;--surface:#1a1920;--fg:#ecebf0;--muted:#a3a1ab;--faint:#75737d;
   --accent:#c49bf0;--accent-2:#d9bcf7;--accent-soft:#2a2135;--rule:#2a2832;--shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
   --g-ocean:#16141d;--g-ocean-hi:#262234;--g-land:#3a3546;--g-border:#57506a;--g-grid:rgba(196,155,240,.09);--g-visited:#c49bf0;--g-dot:#ffaa55;--g-halo:#121116;
-  --grad:linear-gradient(115deg,#c49bf0,#8fb4ff 55%,#ffaa55);--aura-1:rgba(138,63,252,.26);--aura-2:rgba(255,170,85,.10);--aura-3:rgba(80,120,255,.14);--dotgrid:rgba(196,155,240,.08);--wave-hi:226,206,255;--wave-lo:0,0,0;--glyph-dim:150,142,178;--glyph-hi:178,150,255;
+  --grad:linear-gradient(115deg,#c49bf0,#8fb4ff 55%,#ffaa55);--aura-1:rgba(138,63,252,.26);--aura-2:rgba(255,170,85,.10);--aura-3:rgba(80,120,255,.14);--dotgrid:rgba(196,155,240,.08);--glyph-dim:150,142,178;--glyph-hi:178,150,255;
 }
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:72px}
@@ -72,8 +72,6 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 @keyframes drift1{to{transform:translate(90px,60px) scale(1.12)}}
 @keyframes drift2{to{transform:translate(-80px,90px) scale(.92)}}
 
-/* click ripples (behind content, above aura) */
-.ripples{position:fixed;left:-4px;top:-4px;pointer-events:none;z-index:0}
 
 /* hero */
 .hero{display:grid;grid-template-columns:220px 1fr;gap:48px;align-items:center;padding:56px 0 40px}
@@ -233,7 +231,6 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 
 <div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
 <canvas class="glyphs" id="glyphs" aria-hidden="true"></canvas>
-<canvas class="ripples" id="ripples" aria-hidden="true"></canvas>
 
 <div class="bar" id="bar">
   <div class="progress" id="progress"></div>
@@ -431,12 +428,12 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   },{passive:true});
 
   // glyph field: a static grid of monospace characters with soft noise patches;
-  // a click ripple (below) pushes the characters outward as its crests pass
-  var waveHook=null;
+  // clicking the background sends out a ring that lights the characters up as it spreads, then fades
   (function(){
     var gc=document.getElementById('glyphs');if(!gc)return;
     var gx=gc.getContext('2d'),CH='abcdefghijkmnopqrstuvwxyzABCDEFHJKLMNPRSUWXYZ0123456789',LV=14,FS=15,CW=FS*.62+3.4,LH=FS*1.6;
-    var cols,rows,cells,base,atlas,dpr,aw,ah,field=null,fw=0,fc=4,MAXD=8,SOFT=6;
+    var cols,rows,cells,base,atlas,dpr,aw,ah,rings=[],raf=0;
+    var SPEED=.28,REACH=170,EDGE=12,TRAIL=40;// px/ms, max radius, sharpness of the leading edge, length of the afterglow
     // value noise with smooth interpolation
     function hash(x,y){var h=Math.sin(x*127.1+y*311.7)*43758.5453;return h-Math.floor(h)}
     function noise(x,y){
@@ -470,97 +467,38 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
         n=(n-.48)/.32;base[i]=n<0?0:n>1?1:n*n*(3-2*n);
         cells[i]=Math.random()*CH.length|0;
       }
-      buildAtlas();draw();
+      buildAtlas();draw(performance.now());
     }
-    function draw(){
+    function draw(now){
       gx.clearRect(0,0,gc.width,gc.height);
-      var f=field,fh=f?f.length/fw:0;
       for(var y=0;y<rows;y++)for(var x=0;x<cols;x++){
-        var i=y*cols+x,n=base[i],ox=0,oy=0;
-        if(f){
-          // sample the water surface under this glyph: its slope pushes the glyph outward, its crest brightens it
-          var cx=x*CW+CW/2,cy=y*LH+LH/2,u=Math.round(cx/fc)+1,v=Math.round(cy/fc)+1;
-          if(u>0&&v>0&&u<fw-1&&v<fh-1){
-            var j=v*fw+u;
-            // tanh keeps the steep centre from scattering wildly while the fading outer rings still visibly move glyphs
-            var sx=f[j-1]-f[j+1],sy=f[j-fw]-f[j+fw],g=Math.sqrt(sx*sx+sy*sy);
-            if(g>.05){var m=Math.tanh(g/SOFT);ox=sx/g*m*MAXD;oy=sy/g*m*MAXD;n=Math.min(1,n+m*.8)}
-          }
+        var i=y*cols+x,n=base[i],cx=x*CW+CW/2,cy=y*LH+LH/2;
+        for(var k=0;k<rings.length;k++){
+          // brightness from each ring: sharp at its leading edge, a short afterglow behind it, weaker as it grows
+          var o=rings[k],r=(now-o.t)*SPEED,d=Math.sqrt((cx-o.x)*(cx-o.x)+(cy-o.y)*(cy-o.y)),h;
+          if(d>r+EDGE*2.5||r>=REACH)continue;
+          h=d>r?Math.exp(-(d-r)*(d-r)/(EDGE*EDGE)):Math.exp(-(r-d)/TRAIL);
+          n=Math.min(1,n+h*1.25*(1-r/REACH));
         }
-        gx.drawImage(atlas,cells[i]*aw,Math.round(n*(LV-1))*ah,aw,ah,(x*CW+ox)*dpr,(y*LH+oy)*dpr,aw,ah);
+        gx.drawImage(atlas,cells[i]*aw,Math.round(n*(LV-1))*ah,aw,ah,Math.round(x*CW*dpr),Math.round(y*LH*dpr),aw,ah);
       }
+    }
+    function loop(now){
+      rings=rings.filter(function(o){return (now-o.t)*SPEED<REACH});
+      draw(now);
+      raf=rings.length?requestAnimationFrame(loop):0;
     }
     size();
     var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,120)});
-    new MutationObserver(function(){buildAtlas();draw()}).observe(root,{attributes:true,attributeFilter:['data-theme']});
-    // called by the ripple loop every frame with its height field, and with null once the water settles
-    waveHook=function(f,w,cell){field=f;fw=w;fc=cell;draw()};
-  })();
-
-  // click ripples: the background behaves like a water surface (damped 2D wave equation)
-  var rc=document.getElementById('ripples'),rx=rc.getContext('2d'),CELL=4,SPONGE=10,DAMP=.95;
-  var gw,gh,cur,prev,damp,img,px,rafId=0,srcs=[],hi=[255,255,255],lo=[0,0,0];
-  function sizeRipples(){
-    gw=Math.ceil(innerWidth/CELL)+2;gh=Math.ceil(innerHeight/CELL)+2;
-    rc.width=gw;rc.height=gh;rc.style.width=gw*CELL+'px';rc.style.height=gh*CELL+'px';
-    cur=new Float32Array(gw*gh);prev=new Float32Array(gw*gh);damp=new Float32Array(gw*gh);
-    // damping keeps each ripple local (~180px); stronger near the edges so waves fade out instead of bouncing back
-    for(var y=0;y<gh;y++)for(var x=0;x<gw;x++){
-      var d=Math.min(x,y,gw-1-x,gh-1-y),t=d<SPONGE?d/SPONGE:1;
-      damp[y*gw+x]=DAMP*(.9+.1*t);
-    }
-    img=rx.createImageData(gw,gh);px=new Uint32Array(img.data.buffer);
-  }
-  sizeRipples();addEventListener('resize',function(){sizeRipples();if(!rafId)rx.clearRect(0,0,gw,gh)});
-  function step(){
-    for(var y=1;y<gh-1;y++)for(var x=1,i=y*gw+1;x<gw-1;x++,i++){
-      prev[i]=((cur[i-1]+cur[i+1]+cur[i-gw]+cur[i+gw])*.5-prev[i])*damp[i];
-    }
-    var t=cur;cur=prev;prev=t;
-  }
-  function render(){
-    var peak=0,le=new Uint8Array(new Uint32Array([1]).buffer)[0]===1;
-    for(var y=1;y<gh-1;y++)for(var x=1,i=y*gw+1;x<gw-1;x++,i++){
-      var h=cur[i];if(h>peak)peak=h;else if(-h>peak)peak=-h;
-      // surface slope lit from the top-left: crests facing the light glint, the far side darkens
-      var s=(cur[i-1]-cur[i+1])+(cur[i-gw]-cur[i+gw]),c,a;
-      if(s>0){c=hi;a=s*6}else{c=lo;a=-s*4.5}
-      if(a<1){px[i]=0;continue}
-      if(a>140)a=140;a|=0;
-      px[i]=le?(a<<24|c[2]<<16|c[1]<<8|c[0])>>>0:(c[0]<<24|c[1]<<16|c[2]<<8|a)>>>0;
-    }
-    rx.putImageData(img,0,0);
-    return peak;
-  }
-  // an impact bobs the surface a few times, sending out a train of concentric crests
-  var PULSE=[[0,-1],[8,.7],[16,-.45],[24,.25]];
-  function loop(){
-    srcs=srcs.filter(function(o){
-      PULSE.forEach(function(q){if(q[0]===o.t)drop(o.x,o.y,4,o.amp*q[1])});
-      return ++o.t<=PULSE[PULSE.length-1][0];
+    new MutationObserver(function(){buildAtlas();draw(performance.now())}).observe(root,{attributes:true,attributeFilter:['data-theme']});
+    document.addEventListener('click',function(e){
+      if(e.button!==0||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      if(e.target.closest('a,button,video,canvas,input,textarea,select,label,summary,[role="button"],.bar,.pub,.trip,.theater,.globe,.photo'))return;
+      var sel=getSelection&&getSelection();if(sel&&!sel.isCollapsed)return;
+      rings.push({x:e.clientX,y:e.clientY,t:performance.now()});
+      if(!raf)raf=requestAnimationFrame(loop);
     });
-    step();
-    if(!srcs.length&&render()<.6){cur.fill(0);prev.fill(0);rx.clearRect(0,0,gw,gh);rafId=0;if(waveHook)waveHook(null);return}
-    if(srcs.length)render();
-    if(waveHook)waveHook(cur,gw,CELL);
-    rafId=requestAnimationFrame(loop);
-  }
-  function drop(cx,cy,r,amp){
-    for(var y=Math.max(1,cy-r);y<=Math.min(gh-2,cy+r);y++)for(var x=Math.max(1,cx-r);x<=Math.min(gw-2,cx+r);x++){
-      var d=Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy));
-      if(d<r)cur[y*gw+x]+=amp*(Math.cos(d/r*Math.PI)+1)*.5;
-    }
-  }
-  function rgb(v,f){v=v.split(',').map(Number);return v.length===3&&!isNaN(v[0])?v:f}
-  document.addEventListener('click',function(e){
-    if(e.button!==0||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    if(e.target.closest('a,button,video,canvas,input,textarea,select,label,summary,[role="button"],.bar,.pub,.trip,.theater,.globe,.photo'))return;
-    var sel=getSelection&&getSelection();if(sel&&!sel.isCollapsed)return;
-    var cs=getComputedStyle(root);
-    hi=rgb(cs.getPropertyValue('--wave-hi'),hi);lo=rgb(cs.getPropertyValue('--wave-lo'),lo);
-    srcs.push({x:Math.round(e.clientX/CELL)+1,y:Math.round(e.clientY/CELL)+1,amp:110,t:0});
-    if(!rafId)rafId=requestAnimationFrame(loop);
-  });
+  })();
 
   // count-up stats
   var nums=[].slice.call(document.querySelectorAll('.stats b'));
