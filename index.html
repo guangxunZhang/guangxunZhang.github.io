@@ -63,8 +63,8 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 
 /* background aura */
 .aura{position:absolute;left:0;right:0;top:0;height:900px;overflow:hidden;pointer-events:none;z-index:0}
-/* glyph field: full strength in the side gutters, faint behind the text column, fading out downward */
-.aura .glyphs{position:absolute;left:0;top:0;width:100%;height:100%;--gm1:radial-gradient(ellipse 75% 62% at 50% 22%,#000 25%,transparent 80%);--gm2:linear-gradient(90deg,#000 calc(50% - 560px),rgba(0,0,0,.22) calc(50% - 380px),rgba(0,0,0,.22) calc(50% + 380px),#000 calc(50% + 560px));-webkit-mask-image:var(--gm1),var(--gm2);-webkit-mask-composite:source-in;mask-image:var(--gm1),var(--gm2);mask-composite:intersect}
+/* glyph field: fixed behind the whole page; full strength in the side gutters, faint behind the text column */
+.glyphs{position:fixed;left:0;top:0;width:100%;height:100vh;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(90deg,#000 calc(50% - 560px),rgba(0,0,0,.22) calc(50% - 380px),rgba(0,0,0,.22) calc(50% + 380px),#000 calc(50% + 560px));mask-image:linear-gradient(90deg,#000 calc(50% - 560px),rgba(0,0,0,.22) calc(50% - 380px),rgba(0,0,0,.22) calc(50% + 380px),#000 calc(50% + 560px))}
 .aura i{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform}
 .aura i:nth-child(1){width:560px;height:560px;left:calc(50% - 620px);top:-220px;background:var(--aura-1);animation:drift1 22s ease-in-out infinite alternate}
 .aura i:nth-child(2){width:460px;height:460px;left:calc(50% + 120px);top:-120px;background:var(--aura-2);animation:drift2 26s ease-in-out infinite alternate}
@@ -231,7 +231,8 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 </head>
 <body>
 
-<div class="aura" aria-hidden="true"><canvas class="glyphs" id="glyphs"></canvas><i></i><i></i><i></i></div>
+<div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+<canvas class="glyphs" id="glyphs" aria-hidden="true"></canvas>
 <canvas class="ripples" id="ripples" aria-hidden="true"></canvas>
 
 <div class="bar" id="bar">
@@ -430,10 +431,11 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   },{passive:true});
 
   // glyph field: a grid of flickering monospace characters; drifting noise lights up soft patches
+  // and a diagonal wave sweeps through, brightening and lifting the characters as its crest passes
   (function(){
     var gc=document.getElementById('glyphs');if(!gc)return;
     var gx=gc.getContext('2d'),CH='abcdefghijkmnopqrstuvwxyzABCDEFHJKLMNPRSUWXYZ0123456789',LV=14,FS=15,CW=FS*.62+3.4,LH=FS*1.6;
-    var cols,rows,cells,atlas,dpr,aw,ah,on=true,raf=0,last=0,t=0,mx=-1e4,my=-1e4;
+    var cols,rows,cells,atlas,dpr,aw,ah,raf=0,last=0,t=0,mx=-1e4,my=-1e4,WL=460,WT=5200,TAU=Math.PI*2;
     var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
     // value noise with smooth interpolation
     function hash(x,y){var h=Math.sin(x*127.1+y*311.7)*43758.5453;return h-Math.floor(h)}
@@ -467,31 +469,33 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     }
     function draw(){
       gx.clearRect(0,0,gc.width,gc.height);
-      var b=gc.getBoundingClientRect(),px=(mx-b.left)/CW,py=(my-b.top)/LH,s=t*.00006;
+      var px=mx/CW,py=my/LH,s=t*.00006,ph=t/WT*TAU,bob=t*.003;
       for(var y=0;y<rows;y++)for(var x=0;x<cols;x++){
         var n=noise(x*.07+s*3,y*.11-s*2)*.65+noise(x*.19-s*4,y*.27+s*3)*.35;
         n=(n-.48)/.32;n=n<0?0:n>1?1:n;n=n*n*(3-2*n);
+        // wave crest: a narrow bright band travelling down-right across the field
+        var w=Math.sin((x*CW*.8+y*LH)/WL*TAU-ph);w=w>0?w*w*w*w*w:0;
+        n=Math.min(1,n+w*.75);
         var dx=(x-px)*.6,dy=y-py,d=dx*dx+dy*dy;if(d<60)n=Math.max(n,1-d/60);
-        var l=Math.round(n*(LV-1));
-        gx.drawImage(atlas,cells[y*cols+x]*aw,l*ah,aw,ah,Math.round(x*CW*dpr),Math.round(y*LH*dpr),aw,ah);
+        var l=Math.round(n*(LV-1)),lift=w*4+Math.sin(x*.5+y*.3-bob)*1.2;
+        gx.drawImage(atlas,cells[y*cols+x]*aw,l*ah,aw,ah,Math.round(x*CW*dpr),(y*LH-lift)*dpr,aw,ah);
       }
     }
     function tick(now){
-      raf=0;if(!on||document.hidden)return;
+      raf=0;if(document.hidden)return;
       raf=requestAnimationFrame(tick);
-      if(now-last<66)return;// ~15fps keeps the flicker calm and cheap
-      t+=now-last>200?66:now-last;last=now;
-      for(var k=cells.length*.025|0;k--;)cells[Math.random()*cells.length|0]=Math.random()*CH.length|0;
+      if(now-last<32)return;// ~30fps: smooth enough for the wave, still cheap
+      t+=now-last>200?33:now-last;last=now;
+      for(var k=cells.length*.012|0;k--;)cells[Math.random()*cells.length|0]=Math.random()*CH.length|0;
       draw();
     }
-    function start(){if(!RM&&!raf&&on&&!document.hidden)raf=requestAnimationFrame(tick)}
+    function start(){if(!RM&&!raf&&!document.hidden)raf=requestAnimationFrame(tick)}
     size();
     var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,120)});
     new MutationObserver(function(){buildAtlas();draw()}).observe(root,{attributes:true,attributeFilter:['data-theme']});
     if(RM)return;
     document.addEventListener('pointermove',function(e){mx=e.clientX;my=e.clientY},{passive:true});
     document.addEventListener('visibilitychange',start);
-    if('IntersectionObserver' in window)new IntersectionObserver(function(es){on=es[0].isIntersecting;start()}).observe(gc);
     start();
   })();
 
