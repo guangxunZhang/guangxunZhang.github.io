@@ -74,7 +74,7 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 
 
 /* hero */
-.hero{display:grid;grid-template-columns:290px 1fr;gap:44px;align-items:center;padding:56px 0 40px}
+.hero{display:grid;grid-template-columns:300px 1fr;gap:48px;align-items:center;padding:56px 0 40px}
 .photo{position:relative}
 .photo::before{content:"";position:absolute;inset:14px -14px -14px 14px;border-radius:18px;background:var(--grad);opacity:.28;z-index:-1;transition:transform .5s cubic-bezier(.2,.7,.2,1),opacity .5s}
 .photo::after{content:"";position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);pointer-events:none}
@@ -86,12 +86,12 @@ nav a.on{color:var(--accent);background:var(--accent-soft)}
 .photo.fm-done .fm{opacity:0}
 /* t slider: scrub the flow from pure noise (t=0) to the photo (t=1) */
 /* distribution panel: p (noise) -> p_t -> q (data), with the current image as one sample x_t */
-.fm-viz{margin-top:30px}
+.fm-viz{max-width:460px;margin-top:26px;padding:10px 14px 12px;border-radius:14px;border:1px solid var(--rule);background:color-mix(in srgb,var(--surface) 70%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .fm-viz[hidden]{display:none}
-.fm-dist{display:block;width:100%;height:110px;border-radius:12px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule)}
-.fm-cap{margin:10px 0 0;min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.fm-dist{display:block;width:100%;height:100px}
+.fm-cap{margin:8px 0 0;min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
 .fm-cap i{font-family:var(--serif);font-size:1.1em}
-.fm-ctl{display:flex;align-items:center;gap:10px;margin-top:14px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
+.fm-ctl{display:flex;align-items:center;gap:10px;margin-top:8px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
 .fm-ctl input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:4px;margin:0;border-radius:99px;cursor:pointer;background:linear-gradient(90deg,var(--accent) var(--p,100%),var(--rule) var(--p,100%))}
 .fm-ctl input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);box-shadow:var(--shadow);transition:transform .15s}
 .fm-ctl input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);box-shadow:var(--shadow)}
@@ -224,6 +224,7 @@ footer .top:hover{color:var(--accent)}
   .hero{grid-template-columns:1fr;gap:28px;padding:32px 0 24px;text-align:center}
   .photo-col{width:220px;margin:0 auto}
   .interests,.links{justify-content:center}
+  .fm-viz{margin-left:auto;margin-right:auto}
   .news::before{left:6px}
   .news li{grid-template-columns:1fr;gap:0;padding-left:26px}
   .news li::before{left:2px}
@@ -270,11 +271,6 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 <header class="hero" id="about">
   <div class="photo-col">
     <div class="photo" id="photo" title="Click to replay"><img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
-    <div class="fm-viz" id="fm-viz" hidden>
-      <canvas class="fm-dist" id="fm-dist" aria-hidden="true"></canvas>
-      <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to photo"><span title="the photo">t = 1</span></label>
-      <p class="fm-cap" id="fm-cap"></p>
-    </div>
   </div>
   <div>
     <p class="eyebrow">Mathematics &amp; Computer Science &middot; NYU</p>
@@ -287,6 +283,11 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       <a class="btn primary" href="mailto:gz2260@nyu.edu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Email</a>
       <a class="btn" href="assets/Guangxun_Zhang_CV.pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>CV</a>
       <a class="btn" href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9.5l4 2.4V17c0 .3.2.6.4.8C7.3 19.3 9.6 20 12 20s4.7-.7 6.6-2.2c.2-.2.4-.5.4-.8v-5.1l2-1.2V16h2V9.5zm0 2.3 7 4.2-7 4.2-7-4.2z"/></svg>Google Scholar</a>
+    </div>
+    <div class="fm-viz" id="fm-viz" hidden>
+      <canvas class="fm-dist" id="fm-dist" aria-hidden="true"></canvas>
+      <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to the portrait"><span title="the photo">t = 1</span></label>
+      <p class="fm-cap" id="fm-cap"></p>
     </div>
   </div>
 </header>
@@ -601,10 +602,11 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     // Gaussian mixture), the marginal p_t is exactly a mixture with means (1-t)mu0 + t*mu_k and covariances
     // (1-t)^2 s0^2 I + t^2 Sigma_k, so the contours below are the true probability path, not a sketch
     var dc=document.getElementById('fm-dist'),cap=document.getElementById('fm-cap');
-    var dx=dc&&dc.getContext('2d'),dl=document.createElement('canvas'),dlx=dl.getContext('2d'),ghost=document.createElement('canvas');
+    // each layer gets its own scratch canvas: Safari may defer a canvas-to-canvas drawImage, so reusing one shows the last layer twice
+    var dx=dc&&dc.getContext('2d'),dl=document.createElement('canvas'),dlP=document.createElement('canvas'),dlQ=document.createElement('canvas'),ghost=document.createElement('canvas');
     var DW=0,DH=0,ddpr=1,dimg,dens,col,capKey='',LEVELS=[.1,.24,.4,.56,.72,.88];
     function geo(){
-      var s0=DH*.13,Q=[[.8,.36,DH*.15,DH*.055,1.1,.4],[.86,.66,DH*.12,DH*.075,-.6,.6]];
+      var s0=DH*.15,Q=[[.8,.36,DH*.15,DH*.055,1.1,.4],[.86,.66,DH*.12,DH*.075,-.6,.6]];
       return{mu0:[DW*.15,DH*.56],s0:s0,q:Q.map(function(c){
         var cs=Math.cos(c[4]),sn=Math.sin(c[4]),a=c[2]*c[2],b=c[3]*c[3];
         return{m:[DW*c[0],DH*c[1]],xx:a*cs*cs+b*sn*sn,yy:a*sn*sn+b*cs*cs,xy:(a-b)*cs*sn,w:c[5]};
@@ -619,8 +621,8 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       });
     }
     // rasterise a density as banded fills with darker band edges, like a filled contour plot
-    function contours(C,ctx,fill,line){
-      var w=dl.width,h=dl.height,max=0,i,x,y;
+    function contours(C,ctx,fill,line,sc){
+      var w=sc.width,h=sc.height,max=0,i,x,y;
       for(y=0,i=0;y<h;y++)for(x=0;x<w;x++,i++){
         var X=(x+.5)/ddpr,Y=(y+.5)/ddpr,d=0;
         for(var c=0;c<C.length;c++){var o=C[c],ex=X-o.mx,ey=Y-o.my;d+=o.k*Math.exp(-.5*(ex*ex*o.ixx+2*ex*ey*o.ixy+ey*ey*o.iyy))}
@@ -633,14 +635,14 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
         D[o4]=col[0];D[o4+1]=col[1];D[o4+2]=col[2];
         D[o4+3]=edge?line*(.55+L*.07)*255:L?fill*L/LEVELS.length*255:0;
       }
-      dlx.putImageData(dimg,0,0);ctx.drawImage(dl,0,0);
+      sc.getContext('2d').putImageData(dimg,0,0);ctx.drawImage(sc,0,0);
     }
     function sizeDist(){
       var w=dc.clientWidth,h=dc.clientHeight;
       if(w===DW&&h===DH&&dimg)return;
       DW=w;DH=h;ddpr=Math.min(2,devicePixelRatio||1);
-      dc.width=dl.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=ghost.height=Math.round(h*ddpr);
-      dimg=dlx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
+      dc.width=dl.width=dlP.width=dlQ.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=dlP.height=dlQ.height=ghost.height=Math.round(h*ddpr);
+      dimg=dx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
     }
     function label(txt,sub,x,y,a){
       dx.globalAlpha=a;dx.font='italic 15px Newsreader,Georgia,serif';dx.textAlign='center';
@@ -656,10 +658,10 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       if(!col||col.join()!==c.join()){
         // faint outlines of p and q stay put as reference points
         col=c;var gx2=ghost.getContext('2d');gx2.clearRect(0,0,ghost.width,ghost.height);
-        gx2.globalAlpha=.35;contours(comps(G,0),gx2,0,1);contours(comps(G,1),gx2,0,1);gx2.globalAlpha=1;
+        gx2.globalAlpha=.35;contours(comps(G,0),gx2,0,1,dlP);contours(comps(G,1),gx2,0,1,dlQ);gx2.globalAlpha=1;
       }
       dx.setTransform(1,0,0,1,0,0);dx.clearRect(0,0,dc.width,dc.height);dx.drawImage(ghost,0,0);
-      contours(comps(G,t),dx,.5,1);
+      contours(comps(G,t),dx,.5,1,dl);
       dx.setTransform(ddpr,0,0,ddpr,0,0);dx.fillStyle=fg;
       label('p','',G.mu0[0],15,.9);label('q','',DW*.83,15,.9);
       var mx=(1-t)*G.mu0[0]+t*(G.q[0].m[0]*G.q[0].w+G.q[1].m[0]*G.q[1].w);
@@ -678,9 +680,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var key=t<=0?'0':t>=1?'1':'t';
       if(cap&&key!==capKey){
         capKey=key;
-        cap.innerHTML=key==='0'?'This image is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise.'
-          :key==='1'?'This image is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution.'
-          :'This image is one sample <i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>; as <i>t</i> grows, <i>p<sub>t</sub></i> flows from <i>p</i> to <i>q</i>.';
+        cap.innerHTML=key==='0'?'The portrait is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise. Drag <i>t</i> to generate it.'
+          :key==='1'?'The portrait is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution. Drag <i>t</i> back to add noise.'
+          :'The portrait is one sample <i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>; as <i>t</i> grows, <i>p<sub>t</sub></i> flows from <i>p</i> to <i>q</i>.';
       }
     }
     function ensure(){if(!ready||fc.clientWidth!==W)ready=setup();return ready}
