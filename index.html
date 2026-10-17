@@ -612,27 +612,37 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
         return{mx:(1-t)*G.mu0[0]+t*c.m[0],my:(1-t)*G.mu0[1]+t*c.m[1],ixx:yy/det,iyy:xx/det,ixy:-xy/det,k:c.w/Math.sqrt(det)};
       });
     }
-    // rasterise a density as banded fills with darker band edges, like a filled contour plot
+    // rasterise a density as banded fills with darker iso-lines, like a filled contour plot. Edges are
+    // anti-aliased the way a shader would: the distance to each level is (r - level) / |grad r| in pixels
     function contours(C,ctx,fill,line,sc){
-      var w=sc.width,h=sc.height,max=0,i,x,y;
+      var w=sc.width,h=sc.height,max=0,i,x,y,n=LEVELS.length,hw=.5*ddpr;
       for(y=0,i=0;y<h;y++)for(x=0;x<w;x++,i++){
         var X=(x+.5)/ddpr,Y=(y+.5)/ddpr,d=0;
         for(var c=0;c<C.length;c++){var o=C[c],ex=X-o.mx,ey=Y-o.my;d+=o.k*Math.exp(-.5*(ex*ex*o.ixx+2*ex*ey*o.ixy+ey*ey*o.iyy))}
         dens[i]=d;if(d>max)max=d;
       }
-      for(i=0;i<dens.length;i++){var l=0,r=dens[i]/max;while(l<LEVELS.length&&r>=LEVELS[l])l++;dens[i]=l}
+      for(i=0;i<dens.length;i++)dens[i]/=max;
       var D=dimg.data;
       for(y=0,i=0;y<h;y++)for(x=0;x<w;x++,i++){
-        var L=dens[i],edge=L>0&&((x+1<w&&dens[i+1]!==L)||(y+1<h&&dens[i+w]!==L)||(x>0&&dens[i-1]<L)||(y>0&&dens[i-w]<L)),o4=i*4;
+        var r=dens[i],o4=i*4;
+        if(r<LEVELS[0]*.5){D[o4+3]=0;continue}
+        var gx=(dens[x+1<w?i+1:i]-dens[x>0?i-1:i])*.5,gy=(dens[y+1<h?i+w:i]-dens[y>0?i-w:i])*.5,g=Math.sqrt(gx*gx+gy*gy)||1e-6;
+        var band=0,dmin=1e9,li=0;
+        for(var l=0;l<n;l++){
+          var sd=(r-LEVELS[l])/g,a=sd+.5;band+=a<0?0:a>1?1:a;
+          if(Math.abs(sd)<dmin){dmin=Math.abs(sd);li=l}
+        }
+        var la=hw+.5-dmin;la=la<0?0:la>1?1:la;
+        var fa=fill*band/n,lv=line*(.55+li*.07);
         D[o4]=col[0];D[o4+1]=col[1];D[o4+2]=col[2];
-        D[o4+3]=edge?line*(.55+L*.07)*255:L?fill*L/LEVELS.length*255:0;
+        D[o4+3]=(la*lv+(1-la)*fa)*255;
       }
       sc.getContext('2d').putImageData(dimg,0,0);ctx.drawImage(sc,0,0);
     }
     function sizeDist(){
       var w=dc.clientWidth,h=dc.clientHeight;
       if(w===DW&&h===DH&&dimg)return;
-      DW=w;DH=h;ddpr=Math.min(2,devicePixelRatio||1);
+      DW=w;DH=h;ddpr=Math.min(3,devicePixelRatio||1);
       dc.width=dl.width=dlP.width=dlQ.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=dlP.height=dlQ.height=ghost.height=Math.round(h*ddpr);
       dimg=dx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
     }
@@ -663,9 +673,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var px=a0[0]+(a1[0]-a0[0])*t,py=a0[1]+(a1[1]-a0[1])*t;
       dx.strokeStyle=fg;dx.globalAlpha=.45;dx.setLineDash([2,3]);dx.lineWidth=1;
       dx.beginPath();dx.moveTo(a0[0],a0[1]);dx.lineTo(px,py);dx.stroke();dx.setLineDash([]);dx.globalAlpha=1;
-      var tw=17,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
+      var tw=20,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
       dx.globalAlpha=.6;dx.beginPath();dx.moveTo(tx+tw,ty+th);dx.lineTo(px,py);dx.stroke();dx.globalAlpha=1;
-      dx.drawImage(t>=1?img:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
+      dx.imageSmoothingEnabled=true;dx.imageSmoothingQuality='high';dx.drawImage(t>=1?img:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
       dx.beginPath();dx.arc(px,py,3.2,0,Math.PI*2);dx.fill();
       dx.beginPath();dx.arc(px,py,5.5,0,Math.PI*2);dx.strokeStyle='rgba('+c+',.8)';dx.stroke();
       // say it in words, too
