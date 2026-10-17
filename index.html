@@ -12,6 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+<!-- KaTeX typesets the flow-matching math; its fonts are also used for the canvas labels -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" onload="dispatchEvent(new Event('katex-ready'))"></script>
 <style>
 :root{
   --bg:#f7f6f3;--surface:#ffffff;--fg:#17161a;--muted:#5f5d66;--faint:#97949c;
@@ -83,7 +86,9 @@ nav a.on{color:var(--fg);background:var(--accent-soft)}
 .fm-cap{margin:8px 0 0;min-height:1.45em;font-size:12.5px;line-height:1.45;color:var(--muted)}
 .fm-cond{margin:2px 0 2px;font-size:12px;color:var(--faint)}
 .fm-cond i{font-family:var(--serif);font-size:1.15em;color:var(--muted)}
-.fm-cond span{color:var(--fg)}
+.fm-cond .cv{color:var(--fg)}
+.fm-viz .katex{font-size:1.12em}
+.fm-cond .katex{color:var(--muted)}
 .fm-cap i{font-family:var(--serif);font-size:1.1em}
 .fm-ctl{display:flex;align-items:center;gap:10px;margin-top:8px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
 .fm-ctl input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:4px;margin:0;border-radius:99px;cursor:pointer;height:2px;background:linear-gradient(90deg,var(--fg) var(--p,100%),var(--rule) var(--p,100%))}
@@ -270,7 +275,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       <a class="btn" href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9.5l4 2.4V17c0 .3.2.6.4.8C7.3 19.3 9.6 20 12 20s4.7-.7 6.6-2.2c.2-.2.4-.5.4-.8v-5.1l2-1.2V16h2V9.5zm0 2.3 7 4.2-7 4.2-7-4.2z"/></svg>Google Scholar</a>
     </div>
     <div class="fm-viz" id="fm-viz" hidden>
-      <p class="fm-cond">Conditional generation, <i>c</i> = <span>“photos taken in Thailand”</span></p>
+      <p class="fm-cond">Conditional generation, <span class="tex" data-tex="c"><i>c</i></span> = <span class="cv">“photos taken in Thailand”</span></p>
       <canvas class="fm-dist" id="fm-dist" tabindex="0" role="button" aria-label="Switch to the other starting noise point and generate its sample"></canvas>
       <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to the portrait"><span title="the photo">t = 1</span></label>
       <p class="fm-cap" id="fm-cap"></p>
@@ -608,6 +613,16 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     // each layer gets its own scratch canvas: Safari may defer a canvas-to-canvas drawImage, so reusing one shows the last layer twice
     var dx=dc&&dc.getContext('2d'),dl=document.createElement('canvas'),dlP=document.createElement('canvas'),dlQ=document.createElement('canvas'),ghost=document.createElement('canvas');
     var DW=0,DH=0,ddpr=1,dimg,dens,col,capKey='',seeds=[],LEVELS=[.1,.24,.4,.56,.72,.88];
+    // captions as text and TeX pieces
+    var CAPS={
+      '0':[['m','x_0 \\sim p = \\mathcal{N}(0, I)'],['t','. Drag '],['m','t'],['t',', or click a point in '],['m','p'],['t','.']],
+      't':[['m','x_t \\sim p_t(x \\mid c)'],['t',', flowing from '],['m','p'],['t',' to '],['m','q'],['t','.']],
+      '1':[['m','x_1 \\sim q(x \\mid c)'],['t','. Click the other point to resample.']]
+    };
+    function tex(src){
+      if(window.katex)try{return katex.renderToString(src,{throwOnError:false})}catch(e){}
+      return '<i>'+src.replace(/\\(sim|mid|mathcal)/g,function(m,w){return w==='sim'?'~':w==='mid'?'|':''}).replace(/[{}]/g,'').replace(/_(\w)/g,'<sub>$1</sub>')+'</i>';
+    }
     function geo(){
       var s0=DH*.15,Q=[[.8,.36,DH*.15,DH*.055,1.1,.4],[.86,.66,DH*.12,DH*.075,-.6,.6]];
       return{mu0:[DW*.15,DH*.56],s0:s0,q:Q.map(function(c){
@@ -657,17 +672,22 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       dc.width=dl.width=dlP.width=dlQ.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=dlP.height=dlQ.height=ghost.height=Math.round(h*ddpr);
       dimg=dx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
     }
-    // math label: italic base, optional subscript, optional "(x | c)" argument; centred on x
-    function label(txt,sub,x,y,a,arg){
+    // math labels drawn like LaTeX: letters in KaTeX's math italic, brackets and the bar upright, and the
+    // thick spaces TeX puts around \mid. Each part is [kind, text]: i italic, s subscript, r roman, m \mid
+    var MI='KaTeX_Math,"Times New Roman",serif',MR='KaTeX_Main,"Times New Roman",serif';
+    function mlabel(parts,x,y,a){
+      var fz=15,fonts={i:'italic '+fz+'px '+MI,s:'italic '+fz*.7+'px '+MI,r:fz+'px '+MR,m:fz+'px '+MR};
+      var ws=parts.map(function(q){dx.font=fonts[q[0]];return dx.measureText(q[1]).width+(q[0]==='m'?fz*.56:q[0]==='s'?1:0)});
+      var x0=x-ws.reduce(function(u,v){return u+v},0)/2;
       dx.globalAlpha=a;dx.textAlign='left';
-      var F='italic 15px Newsreader,Georgia,serif',Fs='italic 10.5px Newsreader,Georgia,serif',Fa='italic 13px Newsreader,Georgia,serif';
-      dx.font=F;var w1=dx.measureText(txt).width;dx.font=Fs;var w2=sub?dx.measureText(sub).width+1:0;dx.font=Fa;var w3=arg?dx.measureText(arg).width+2:0;
-      var x0=x-(w1+w2+w3)/2;
-      dx.font=F;dx.fillText(txt,x0,y);
-      if(sub){dx.font=Fs;dx.fillText(sub,x0+w1+.5,y+3)}
-      if(arg){dx.font=Fa;dx.fillText(arg,x0+w1+w2+2,y)}
+      parts.forEach(function(q,n){
+        dx.font=fonts[q[0]];
+        dx.fillText(q[1],x0+(q[0]==='m'?fz*.28:0)+(q[0]==='s'?.5:0),y+(q[0]==='s'?3:0));
+        x0+=ws[n];
+      });
       dx.globalAlpha=1;
     }
+    var XC=[['r','('],['i','x'],['m','|'],['i','c'],['r',')']];
     function drawDist(t){
       if(!dc||!dc.clientWidth)return;
       sizeDist();
@@ -681,9 +701,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       dx.setTransform(1,0,0,1,0,0);dx.clearRect(0,0,dc.width,dc.height);dx.drawImage(ghost,0,0);
       contours(comps(G,t),dx,.5,1,dl);
       dx.setTransform(ddpr,0,0,ddpr,0,0);dx.fillStyle=fg;
-      label('p','',G.mu0[0],15,.9);label('q','',DW*.9,15,.9,'(x | c)');
+      mlabel([['i','p']],G.mu0[0],15,.9);mlabel([['i','q']].concat(XC),DW*.9,15,.9);
       var mx=(1-t)*G.mu0[0]+t*(G.q[0].m[0]*G.q[0].w+G.q[1].m[0]*G.q[1].w);
-      if(t>.14&&t<.86)label('p','t',mx,15,Math.min(1,Math.min(t-.14,.86-t)*8),'(x | c)');
+      if(t>.14&&t<.86)mlabel([['i','p'],['s','t']].concat(XC),mx,15,Math.min(1,Math.min(t-.14,.86-t)*8));
       // each sample is a fixed pair (x0, x1); x_t on the straight line between them is a sample of p_t
       seeds=S.map(function(o,n){
         var m=G.q[o.q].m,o0=n?[-.55,-.5]:[.5,.55],o1=o.q?[-.25,.15]:[.1,-.05];
@@ -709,9 +729,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var key=t<=0?'0':t>=1?'1':'t';
       if(cap&&key!==capKey){
         capKey=key;
-        cap.innerHTML=key==='0'?'<i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I). Drag <i>t</i>, or click a point in <i>p</i>.'
-          :key==='1'?'<i>x</i><sub>1</sub> ~ <i>q</i>(<i>x</i> | <i>c</i>). Click the other point to resample.'
-          :'<i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>(<i>x</i> | <i>c</i>), flowing from <i>p</i> to <i>q</i>.';
+        cap.innerHTML=CAPS[key].map(function(q){return q[0]==='m'?tex(q[1]):q[1]}).join('');
       }
     }
     function ensure(){if(!ready||fc.clientWidth!==W)ready=setup();return ready}
@@ -751,8 +769,15 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       if(RM||ph.classList.contains('fm-done'))done();else play();
     },done);
     ph.addEventListener('click',function(){if(!RM&&ph.classList.contains('fm-done'))play()});
-    new MutationObserver(function(){if(ready)drawDist(sl?sl.value/1000:1)}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-    addEventListener('resize',function(){if(ready)drawDist(sl?sl.value/1000:1)});
+    function redraw(){if(ready)drawDist(sl?sl.value/1000:1)}
+    new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+    addEventListener('resize',redraw);
+    function typeset(){
+      [].forEach.call(document.querySelectorAll('.fm-viz .tex'),function(el){el.innerHTML=tex(el.dataset.tex)});
+      capKey='';redraw();
+    }
+    addEventListener('katex-ready',typeset);if(window.katex)typeset();
+    if(document.fonts)Promise.all([document.fonts.load('italic 15px KaTeX_Math'),document.fonts.load('15px KaTeX_Main')]).then(redraw,function(){});
     // scrubbing stops the intro; t=1 hands back to the real photo
     if(sl)sl.addEventListener('input',function(){
       if(raf){cancelAnimationFrame(raf);raf=0}
