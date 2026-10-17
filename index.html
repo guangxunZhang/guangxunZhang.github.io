@@ -100,8 +100,8 @@ nav a.on{color:var(--fg);background:var(--accent-soft)}
 h1{font-family:var(--serif);font-weight:500;font-size:clamp(2.6rem,6vw,3.6rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 14px;color:var(--fg)}
 .sub{color:var(--muted);margin:0 0 18px;font-size:15.5px}
 /* availability: a small live dot with a soft ping */
-.status{display:flex;align-items:center;gap:10px;margin:0 0 18px;font-size:14.5px;color:var(--fg)}
-.status .dot{position:relative;flex:none;width:8px;height:8px;border-radius:50%;background:var(--live)}
+.status{display:flex;align-items:flex-start;gap:10px;max-width:460px;margin:0 0 18px;font-size:14.5px;line-height:1.55;color:var(--fg)}
+.status .dot{position:relative;flex:none;width:8px;height:8px;margin-top:7px;border-radius:50%;background:var(--live)}
 .status .dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--live);animation:live 2s ease-out infinite}
 @keyframes live{from{transform:scale(1);opacity:.55}to{transform:scale(2.8);opacity:0}}
 .interests{display:flex;flex-wrap:wrap;gap:4px 0;margin:0 0 24px;padding:0;list-style:none}
@@ -220,6 +220,7 @@ footer .top:hover{color:var(--fg)}
   .hero{grid-template-columns:1fr;gap:28px;padding:32px 0 24px;text-align:center}
   .photo-col{width:220px;margin:0 auto}
   .interests,.links,.status{justify-content:center}
+  .status{margin-left:auto;margin-right:auto;text-align:left}
   .fm-viz{margin-left:auto;margin-right:auto}
   .news::before{left:6px}
   .news li{grid-template-columns:1fr;gap:0;padding-left:26px}
@@ -271,7 +272,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     <p class="eyebrow">Mathematics &amp; Computer Science &middot; NYU</p>
     <h1>Guangxun Zhang</h1>
     <p class="sub">Undergraduate, New York University<br>B.A. Honors Mathematics &amp; B.A. Honors Computer Science</p>
-    <p class="status"><span class="dot" aria-hidden="true"></span><span>Open to PhD positions starting in 2027. Interested? <a href="mailto:gz2260@nyu.edu">Contact me</a>.</span></p>
+    <p class="status"><span class="dot" aria-hidden="true"></span><span>I am open to PhD positions starting in 2027. If you are interested in working with me, please feel free to <a href="mailto:gz2260@nyu.edu">contact me</a>.</span></p>
     <ul class="interests" aria-label="Research interests">
       <li>Generative Modeling</li><li>Representation Learning</li>
     </ul>
