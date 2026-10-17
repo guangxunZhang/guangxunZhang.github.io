@@ -516,14 +516,15 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 
   // flow matching intro, in pixel space like a real image model: the whole frame starts as Gaussian noise
   // x0 ~ N(0,I) and moves along the straight path x_t = t*x1 + (1-t)*x0 toward the photo x1. The model's
-  // estimate of x1 is shown coarse-to-fine (blurry early, sharp late), the way diffusion samples resolve.
+  // estimate of x1 is shown coarse-to-fine (blurry early, sharp late), the way diffusion samples resolve,
+  // and like a stochastic sampler each step re-draws the noise instead of reusing one fixed field.
   // The slider under the photo scrubs t by hand.
   (function(){
     var ph=document.getElementById('photo'),fc=document.getElementById('fm');if(!ph||!fc)return;
     var img=ph.querySelector('img'),ctl=document.getElementById('fm-viz'),sl=document.getElementById('fm-t');
     var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
     var fx=fc.getContext('2d'),buf=document.createElement('canvas'),bx=buf.getContext('2d');
-    var DUR=2600,BLURS=[0,1,2,4,8,16],W=0,H,N,eps,lv,out,raf=0,t0=0,ready=false;
+    var DUR=2600,BLURS=[0,1,2,4,8,16],STEPS=40,W=0,H,N,lv,out,raf=0,t0=0,ready=false,GT=new Float32Array(65536);
     function done(){ph.classList.add('fm-done');setSlider(1);if(ready)drawDist(1)}
     function setSlider(k){if(sl){sl.value=Math.round(k*1000);sl.style.setProperty('--p',k*100+'%')}}
     function randn(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
@@ -549,21 +550,31 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var dpr=Math.min(2,devicePixelRatio||1);fc.width=Math.round(W*dpr);fc.height=Math.round(H*dpr);
       bx.drawImage(img,0,0,W,H);
       var px;try{px=bx.getImageData(0,0,W,H).data}catch(e){return false}// tainted canvas (e.g. file://)
-      N=W*H*4;eps=new Float32Array(N);
-      // one fixed noise sample, stored already mapped from [-1,1] to [0,255]
-      for(var i=0;i<N;i++)eps[i]=(i&3)===3?255:(randn()+1)*127.5;
+      N=W*H*4;
       lv=BLURS.map(function(r){return r?blur(px,W,H,r):new Float32Array(px)});
       out=bx.createImageData(W,H);
       return true;
     }
     // draw x_t at time t in [0,1]
+    // a table of Gaussian draws, indexed by an integer hash of (pixel, step): every sampling step gets
+    // fresh noise in every pixel, yet the same t always shows the same noise, so scrubbing is repeatable
+    for(var gi=0;gi<GT.length;gi++)GT[gi]=randn()*127.5;
+    function h(i,k){
+      var x=Math.imul(i,0x9E3779B1)^Math.imul(k+1,0x85EBCA77);
+      x^=x>>>15;x=Math.imul(x,0x2C1B3C6D);x^=x>>>12;x=Math.imul(x,0x297A2D39);return x^(x>>>15);
+    }
     function render(t){
       var e=(1-t)*Math.pow(1-t,.3)*(BLURS.length-1),j=Math.min(BLURS.length-2,e|0),f=e-j;
       var A=lv[j],B=lv[j+1],d=out.data,s=1-t;
-      for(var i=0;i<N;i+=4){
-        d[i]=t*(A[i]+(B[i]-A[i])*f)+s*eps[i];
-        d[i+1]=t*(A[i+1]+(B[i+1]-A[i+1])*f)+s*eps[i+1];
-        d[i+2]=t*(A[i+2]+(B[i+2]-A[i+2])*f)+s*eps[i+2];
+      // between step k and k+1 the noise rotates from one fresh draw to the next (cos/sin keeps it unit-variance)
+      var st=t*STEPS,k=Math.min(STEPS-1,st|0),u=st-k;u=u*u*(3-2*u);
+      var ca=Math.cos(u*Math.PI/2)*s,sa=Math.sin(u*Math.PI/2)*s,m=127.5*s;
+      // one hash per pixel and step; its low bits, high bits and a remix pick the three channels' draws
+      for(var i=0,p=0;i<N;i+=4,p++){
+        var x=h(p,k),y=h(p,k+1),x2=Math.imul(x,0x9E3779B1)>>>16,y2=Math.imul(y,0x9E3779B1)>>>16;
+        d[i]=t*(A[i]+(B[i]-A[i])*f)+m+ca*GT[x&65535]+sa*GT[y&65535];
+        d[i+1]=t*(A[i+1]+(B[i+1]-A[i+1])*f)+m+ca*GT[x>>>16]+sa*GT[y>>>16];
+        d[i+2]=t*(A[i+2]+(B[i+2]-A[i+2])*f)+m+ca*GT[x2]+sa*GT[y2];
         d[i+3]=255;
       }
       bx.putImageData(out,0,0);
