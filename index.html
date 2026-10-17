@@ -78,7 +78,8 @@ nav a.on{color:var(--fg);background:var(--accent-soft)}
 /* distribution panel: p (noise) -> p_t -> q (data), with the current image as one sample x_t */
 .fm-viz{max-width:460px;margin-top:30px;padding:10px 14px 12px;border-radius:10px;border:1px solid var(--rule);background:var(--surface)}
 .fm-viz[hidden]{display:none}
-.fm-dist{display:block;width:100%;height:100px}
+.fm-dist{display:block;width:100%;height:100px;border-radius:6px}
+.fm-dist:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .fm-cap{margin:8px 0 0;min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
 .fm-cap i{font-family:var(--serif);font-size:1.1em}
 .fm-ctl{display:flex;align-items:center;gap:10px;margin-top:8px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
@@ -251,7 +252,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
 
 <header class="hero" id="about">
   <div class="photo-col">
-    <div class="photo" id="photo" title="Click to replay"><img src="assets/photo.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
+    <div class="photo" id="photo" title="Click to replay"><img src="assets/photo-bangkok.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
   </div>
   <div>
     <p class="eyebrow">Mathematics &amp; Computer Science &middot; NYU</p>
@@ -266,7 +267,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       <a class="btn" href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9.5l4 2.4V17c0 .3.2.6.4.8C7.3 19.3 9.6 20 12 20s4.7-.7 6.6-2.2c.2-.2.4-.5.4-.8v-5.1l2-1.2V16h2V9.5zm0 2.3 7 4.2-7 4.2-7-4.2z"/></svg>Google Scholar</a>
     </div>
     <div class="fm-viz" id="fm-viz" hidden>
-      <canvas class="fm-dist" id="fm-dist" aria-hidden="true"></canvas>
+      <canvas class="fm-dist" id="fm-dist" tabindex="0" role="button" aria-label="Switch to the other starting noise point and generate its sample"></canvas>
       <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to the portrait"><span title="the photo">t = 1</span></label>
       <p class="fm-cap" id="fm-cap"></p>
     </div>
@@ -518,13 +519,17 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   // x0 ~ N(0,I) and moves along the straight path x_t = t*x1 + (1-t)*x0 toward the photo x1. The model's
   // estimate of x1 is shown coarse-to-fine (blurry early, sharp late), the way diffusion samples resolve,
   // and like a stochastic sampler each step re-draws the noise instead of reusing one fixed field.
+  // Two starting points x0 sit in p; each flows to its own photo in q (click one to sample from it).
   // The slider under the photo scrubs t by hand.
   (function(){
     var ph=document.getElementById('photo'),fc=document.getElementById('fm');if(!ph||!fc)return;
     var img=ph.querySelector('img'),ctl=document.getElementById('fm-viz'),sl=document.getElementById('fm-t');
     var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
     var fx=fc.getContext('2d'),buf=document.createElement('canvas'),bx=buf.getContext('2d');
-    var DUR=2600,BLURS=[0,1,2,4,8,16],STEPS=40,W=0,H,N,lv,out,raf=0,t0=0,ready=false,GT=new Float32Array(65536);
+    var DUR=2600,BLURS=[0,1,2,4,8,16],STEPS=40,W=0,H,N,out,raf=0,t0=0,ready=false,GT=new Float32Array(65536);
+    // the two samples: each has its own starting noise x0 in p and lands in its own mode of q
+    var S=[{src:img.getAttribute('src'),q:1},{src:'assets/photo.jpg',q:0}],cur=0;
+    S.forEach(function(o){o.el=new Image();o.el.src=o.src});
     function done(){ph.classList.add('fm-done');setSlider(1);if(ready)drawDist(1)}
     function setSlider(k){if(sl){sl.value=Math.round(k*1000);sl.style.setProperty('--p',k*100+'%')}}
     function randn(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
@@ -548,10 +553,12 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       W=fc.clientWidth;H=fc.clientHeight;if(!W||!H)return false;
       buf.width=W;buf.height=H;
       var dpr=Math.min(2,devicePixelRatio||1);fc.width=Math.round(W*dpr);fc.height=Math.round(H*dpr);
-      bx.drawImage(img,0,0,W,H);
-      var px;try{px=bx.getImageData(0,0,W,H).data}catch(e){return false}// tainted canvas (e.g. file://)
       N=W*H*4;
-      lv=BLURS.map(function(r){return r?blur(px,W,H,r):new Float32Array(px)});
+      for(var n=0;n<S.length;n++){
+        bx.drawImage(S[n].el,0,0,W,H);
+        var px;try{px=bx.getImageData(0,0,W,H).data}catch(e){return false}// tainted canvas (e.g. file://)
+        S[n].lv=BLURS.map(function(r){return new Uint8ClampedArray(r?blur(px,W,H,r):px)});
+      }
       out=bx.createImageData(W,H);
       return true;
     }
@@ -565,13 +572,13 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     }
     function render(t){
       var e=(1-t)*Math.pow(1-t,.3)*(BLURS.length-1),j=Math.min(BLURS.length-2,e|0),f=e-j;
-      var A=lv[j],B=lv[j+1],d=out.data,s=1-t;
+      var lv=S[cur].lv,A=lv[j],B=lv[j+1],d=out.data,s=1-t,seed=cur*7919;
       // between step k and k+1 the noise rotates from one fresh draw to the next (cos/sin keeps it unit-variance)
       var st=t*STEPS,k=Math.min(STEPS-1,st|0),u=st-k;u=u*u*(3-2*u);
       var ca=Math.cos(u*Math.PI/2)*s,sa=Math.sin(u*Math.PI/2)*s,m=127.5*s;
       // one hash per pixel and step; its low bits, high bits and a remix pick the three channels' draws
       for(var i=0,p=0;i<N;i+=4,p++){
-        var x=h(p,k),y=h(p,k+1),x2=Math.imul(x,0x9E3779B1)>>>16,y2=Math.imul(y,0x9E3779B1)>>>16;
+        var x=h(p,k+seed),y=h(p,k+1+seed),x2=Math.imul(x,0x9E3779B1)>>>16,y2=Math.imul(y,0x9E3779B1)>>>16;
         d[i]=t*(A[i]+(B[i]-A[i])*f)+m+ca*GT[x&65535]+sa*GT[y&65535];
         d[i+1]=t*(A[i+1]+(B[i+1]-A[i+1])*f)+m+ca*GT[x>>>16]+sa*GT[y>>>16];
         d[i+2]=t*(A[i+2]+(B[i+2]-A[i+2])*f)+m+ca*GT[x2]+sa*GT[y2];
@@ -596,7 +603,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     var dc=document.getElementById('fm-dist'),cap=document.getElementById('fm-cap');
     // each layer gets its own scratch canvas: Safari may defer a canvas-to-canvas drawImage, so reusing one shows the last layer twice
     var dx=dc&&dc.getContext('2d'),dl=document.createElement('canvas'),dlP=document.createElement('canvas'),dlQ=document.createElement('canvas'),ghost=document.createElement('canvas');
-    var DW=0,DH=0,ddpr=1,dimg,dens,col,capKey='',LEVELS=[.1,.24,.4,.56,.72,.88];
+    var DW=0,DH=0,ddpr=1,dimg,dens,col,capKey='',seeds=[],LEVELS=[.1,.24,.4,.56,.72,.88];
     function geo(){
       var s0=DH*.15,Q=[[.8,.36,DH*.15,DH*.055,1.1,.4],[.86,.66,DH*.12,DH*.075,-.6,.6]];
       return{mu0:[DW*.15,DH*.56],s0:s0,q:Q.map(function(c){
@@ -668,22 +675,33 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       label('p','',G.mu0[0],15,.9);label('q','',DW*.83,15,.9);
       var mx=(1-t)*G.mu0[0]+t*(G.q[0].m[0]*G.q[0].w+G.q[1].m[0]*G.q[1].w);
       if(t>.14&&t<.86)label('p','t',mx,15,Math.min(1,Math.min(t-.14,.86-t)*8));
-      // one fixed pair (x0, x1): x_t on the straight line between them is a sample of p_t, and it is this image
-      var a0=[G.mu0[0]+G.s0*.5,G.mu0[1]+G.s0*.55],a1=[G.q[1].m[0]-G.s0*.25,G.q[1].m[1]+G.s0*.15];
+      // each sample is a fixed pair (x0, x1); x_t on the straight line between them is a sample of p_t
+      seeds=S.map(function(o,n){
+        var m=G.q[o.q].m,o0=n?[-.55,-.5]:[.5,.55],o1=o.q?[-.25,.15]:[.1,-.05];
+        return{x0:[G.mu0[0]+G.s0*o0[0],G.mu0[1]+G.s0*o0[1]],x1:[m[0]+G.s0*o1[0],m[1]+G.s0*o1[1]]};
+      });
+      // starting points in p: rings you can click; the active one also carries the moving sample
+      dx.lineWidth=1.25;
+      seeds.forEach(function(e,n){
+        dx.beginPath();dx.arc(e.x0[0],e.x0[1],4.5,0,Math.PI*2);
+        dx.fillStyle=cs.getPropertyValue('--surface').trim()||'#fff';dx.fill();dx.strokeStyle=fg;dx.globalAlpha=n===cur?.9:.6;dx.stroke();dx.globalAlpha=1;
+      });
+      dx.fillStyle=fg;
+      var a0=seeds[cur].x0,a1=seeds[cur].x1;
       var px=a0[0]+(a1[0]-a0[0])*t,py=a0[1]+(a1[1]-a0[1])*t;
       dx.strokeStyle=fg;dx.globalAlpha=.45;dx.setLineDash([2,3]);dx.lineWidth=1;
       dx.beginPath();dx.moveTo(a0[0],a0[1]);dx.lineTo(px,py);dx.stroke();dx.setLineDash([]);dx.globalAlpha=1;
       var tw=20,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
       dx.globalAlpha=.6;dx.beginPath();dx.moveTo(tx+tw,ty+th);dx.lineTo(px,py);dx.stroke();dx.globalAlpha=1;
-      dx.imageSmoothingEnabled=true;dx.imageSmoothingQuality='high';dx.drawImage(t>=1?img:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
+      dx.imageSmoothingEnabled=true;dx.imageSmoothingQuality='high';dx.drawImage(t>=1?S[cur].el:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
       dx.beginPath();dx.arc(px,py,3.2,0,Math.PI*2);dx.fill();
       dx.beginPath();dx.arc(px,py,5.5,0,Math.PI*2);dx.strokeStyle='rgba('+c+',.8)';dx.stroke();
       // say it in words, too
       var key=t<=0?'0':t>=1?'1':'t';
       if(cap&&key!==capKey){
         capKey=key;
-        cap.innerHTML=key==='0'?'The portrait is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise. Drag <i>t</i> to generate it.'
-          :key==='1'?'The portrait is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution. Drag <i>t</i> back to add noise.'
+        cap.innerHTML=key==='0'?'The portrait is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise. Drag <i>t</i>, or click a point in <i>p</i> to flow from it.'
+          :key==='1'?'The portrait is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution. Click the other point in <i>p</i> to draw another sample.'
           :'The portrait is one sample <i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>; as <i>t</i> grows, <i>p<sub>t</sub></i> flows from <i>p</i> to <i>q</i>.';
       }
     }
@@ -698,7 +716,27 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       if(raf)return;if(!ensure()){done();return}
       ph.classList.remove('fm-done');t0=performance.now();raf=requestAnimationFrame(frame);
     }
-    (img.decode?img.decode():Promise.resolve()).then(function(){
+    function decode(el){return el.decode?el.decode():new Promise(function(ok,no){el.complete?ok():(el.onload=ok,el.onerror=no)})}
+    // switch to sample n: the real photo swaps under the canvas, then the flow plays from its own noise
+    function select(n){
+      if(raf){cancelAnimationFrame(raf);raf=0}
+      if(n!==cur){cur=n;ph.classList.remove('fm-done');img.src=S[n].src}
+      if(RM){render(1);done()}else play();
+    }
+    function seedAt(e){
+      var b=dc.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
+      for(var n=0;n<seeds.length;n++){var q=seeds[n].x0;if((q[0]-x)*(q[0]-x)+(q[1]-y)*(q[1]-y)<196)return n}
+      return -1;
+    }
+    if(dc){
+      dc.addEventListener('click',function(e){var n=seedAt(e);if(n>=0&&ready)select(n)});
+      dc.addEventListener('pointermove',function(e){dc.style.cursor=seedAt(e)>=0?'pointer':''});
+      dc.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&ready&&S.length>1){e.preventDefault();select(1-cur)}});
+    }
+    decode(S[0].el).then(function(){
+      // the second photo is optional: if it cannot load, only the main sample remains
+      return decode(S[1].el).catch(function(){S.length=1});
+    }).then(function(){
       if(!ensure()){done();return}
       ph.dataset.fm='on';if(ctl)ctl.hidden=false;drawDist(0);
       if(RM||ph.classList.contains('fm-done'))done();else play();
