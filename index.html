@@ -80,7 +80,10 @@ nav a.on{color:var(--fg);background:var(--accent-soft)}
 .fm-viz[hidden]{display:none}
 .fm-dist{display:block;width:100%;height:100px;border-radius:6px}
 .fm-dist:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.fm-cap{margin:8px 0 0;min-height:2.9em;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.fm-cap{margin:8px 0 0;min-height:1.45em;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.fm-cond{margin:2px 0 2px;font-size:12px;color:var(--faint)}
+.fm-cond i{font-family:var(--serif);font-size:1.15em;color:var(--muted)}
+.fm-cond span{color:var(--fg)}
 .fm-cap i{font-family:var(--serif);font-size:1.1em}
 .fm-ctl{display:flex;align-items:center;gap:10px;margin-top:8px;font:500 11.5px/1 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--faint);white-space:nowrap}
 .fm-ctl input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:4px;margin:0;border-radius:99px;cursor:pointer;height:2px;background:linear-gradient(90deg,var(--fg) var(--p,100%),var(--rule) var(--p,100%))}
@@ -267,6 +270,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       <a class="btn" href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9.5l4 2.4V17c0 .3.2.6.4.8C7.3 19.3 9.6 20 12 20s4.7-.7 6.6-2.2c.2-.2.4-.5.4-.8v-5.1l2-1.2V16h2V9.5zm0 2.3 7 4.2-7 4.2-7-4.2z"/></svg>Google Scholar</a>
     </div>
     <div class="fm-viz" id="fm-viz" hidden>
+      <p class="fm-cond">Conditional generation, <i>c</i> = <span>“photos taken in Thailand”</span></p>
       <canvas class="fm-dist" id="fm-dist" tabindex="0" role="button" aria-label="Switch to the other starting noise point and generate its sample"></canvas>
       <label class="fm-ctl"><span title="pure Gaussian noise">t = 0</span><input type="range" id="fm-t" min="0" max="1000" value="0" aria-label="Flow matching time t, from Gaussian noise to the portrait"><span title="the photo">t = 1</span></label>
       <p class="fm-cap" id="fm-cap"></p>
@@ -653,10 +657,15 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       dc.width=dl.width=dlP.width=dlQ.width=ghost.width=Math.round(w*ddpr);dc.height=dl.height=dlP.height=dlQ.height=ghost.height=Math.round(h*ddpr);
       dimg=dx.createImageData(dl.width,dl.height);dens=new Float32Array(dl.width*dl.height);col=null;
     }
-    function label(txt,sub,x,y,a){
-      dx.globalAlpha=a;dx.font='italic 15px Newsreader,Georgia,serif';dx.textAlign='center';
-      var w=dx.measureText(txt).width;dx.fillText(txt,x-(sub?3:0),y);
-      if(sub){dx.font='italic 10.5px Newsreader,Georgia,serif';dx.fillText(sub,x-3+w/2+3,y+3)}
+    // math label: italic base, optional subscript, optional "(x | c)" argument; centred on x
+    function label(txt,sub,x,y,a,arg){
+      dx.globalAlpha=a;dx.textAlign='left';
+      var F='italic 15px Newsreader,Georgia,serif',Fs='italic 10.5px Newsreader,Georgia,serif',Fa='italic 13px Newsreader,Georgia,serif';
+      dx.font=F;var w1=dx.measureText(txt).width;dx.font=Fs;var w2=sub?dx.measureText(sub).width+1:0;dx.font=Fa;var w3=arg?dx.measureText(arg).width+2:0;
+      var x0=x-(w1+w2+w3)/2;
+      dx.font=F;dx.fillText(txt,x0,y);
+      if(sub){dx.font=Fs;dx.fillText(sub,x0+w1+.5,y+3)}
+      if(arg){dx.font=Fa;dx.fillText(arg,x0+w1+w2+2,y)}
       dx.globalAlpha=1;
     }
     function drawDist(t){
@@ -672,9 +681,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       dx.setTransform(1,0,0,1,0,0);dx.clearRect(0,0,dc.width,dc.height);dx.drawImage(ghost,0,0);
       contours(comps(G,t),dx,.5,1,dl);
       dx.setTransform(ddpr,0,0,ddpr,0,0);dx.fillStyle=fg;
-      label('p','',G.mu0[0],15,.9);label('q','',DW*.83,15,.9);
+      label('p','',G.mu0[0],15,.9);label('q','',DW*.9,15,.9,'(x | c)');
       var mx=(1-t)*G.mu0[0]+t*(G.q[0].m[0]*G.q[0].w+G.q[1].m[0]*G.q[1].w);
-      if(t>.14&&t<.86)label('p','t',mx,15,Math.min(1,Math.min(t-.14,.86-t)*8));
+      if(t>.14&&t<.86)label('p','t',mx,15,Math.min(1,Math.min(t-.14,.86-t)*8),'(x | c)');
       // each sample is a fixed pair (x0, x1); x_t on the straight line between them is a sample of p_t
       seeds=S.map(function(o,n){
         var m=G.q[o.q].m,o0=n?[-.55,-.5]:[.5,.55],o1=o.q?[-.25,.15]:[.1,-.05];
@@ -691,8 +700,8 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var px=a0[0]+(a1[0]-a0[0])*t,py=a0[1]+(a1[1]-a0[1])*t;
       dx.strokeStyle=fg;dx.globalAlpha=.45;dx.setLineDash([2,3]);dx.lineWidth=1;
       dx.beginPath();dx.moveTo(a0[0],a0[1]);dx.lineTo(px,py);dx.stroke();dx.setLineDash([]);dx.globalAlpha=1;
-      var tw=20,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
-      dx.globalAlpha=.6;dx.beginPath();dx.moveTo(tx+tw,ty+th);dx.lineTo(px,py);dx.stroke();dx.globalAlpha=1;
+      var tw=20,th=tw*900/612,tx=Math.max(3,Math.min(DW-tw-3,t<.5?px+9:px-tw-9)),ty=Math.max(3,Math.min(DH-th-3,py-th-8));
+      dx.globalAlpha=.6;dx.beginPath();dx.moveTo(t<.5?tx:tx+tw,ty+th);dx.lineTo(px,py);dx.stroke();dx.globalAlpha=1;
       dx.imageSmoothingEnabled=true;dx.imageSmoothingQuality='high';dx.drawImage(t>=1?S[cur].el:buf,tx,ty,tw,th);dx.strokeRect(tx+.5,ty+.5,tw-1,th-1);
       dx.beginPath();dx.arc(px,py,3.2,0,Math.PI*2);dx.fill();
       dx.beginPath();dx.arc(px,py,5.5,0,Math.PI*2);dx.strokeStyle='rgba('+c+',.8)';dx.stroke();
@@ -700,9 +709,9 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
       var key=t<=0?'0':t>=1?'1':'t';
       if(cap&&key!==capKey){
         capKey=key;
-        cap.innerHTML=key==='0'?'The portrait is <i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I): pure Gaussian noise. Drag <i>t</i>, or click a point in <i>p</i> to flow from it.'
-          :key==='1'?'The portrait is <i>x</i><sub>1</sub> ~ <i>q</i>, a sample of the data distribution. Click the other point in <i>p</i> to draw another sample.'
-          :'The portrait is one sample <i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>; as <i>t</i> grows, <i>p<sub>t</sub></i> flows from <i>p</i> to <i>q</i>.';
+        cap.innerHTML=key==='0'?'<i>x</i><sub>0</sub> ~ <i>p</i> = N(0, I). Drag <i>t</i>, or click a point in <i>p</i>.'
+          :key==='1'?'<i>x</i><sub>1</sub> ~ <i>q</i>(<i>x</i> | <i>c</i>). Click the other point to resample.'
+          :'<i>x<sub>t</sub></i> ~ <i>p<sub>t</sub></i>(<i>x</i> | <i>c</i>), flowing from <i>p</i> to <i>q</i>.';
       }
     }
     function ensure(){if(!ready||fc.clientWidth!==W)ready=setup();return ready}
