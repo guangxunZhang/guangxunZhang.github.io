@@ -73,10 +73,7 @@ nav a.on{color:var(--fg);background:var(--accent-soft)}
 .lead{font-family:var(--serif);font-weight:400;font-size:1.3rem;line-height:1.6;letter-spacing:-.003em;color:var(--fg);max-width:33em;margin:0 0 32px}
 .lead a{color:var(--fg);background:none;text-decoration:underline;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--fg) 28%,transparent);text-underline-offset:4px;transition:text-decoration-color .2s}
 .lead a:hover{text-decoration-color:var(--fg)}
-.meta{margin:34px 0 0;max-width:580px;border-top:1px solid var(--rule)}
-.meta>div{display:grid;grid-template-columns:118px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14.5px;line-height:1.5}
-.meta dt{padding-top:3px;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-.meta dd{margin:0;color:var(--fg)}
+.contact{margin:30px 0 0;font-size:15px;font-weight:500;line-height:1.5}
 .photo{position:relative}
 .photo::after{content:"";position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);pointer-events:none}
 .photo img{display:block;width:100%;height:auto;aspect-ratio:612/900;object-fit:cover;border-radius:12px;box-shadow:0 22px 44px -28px rgba(20,18,24,.45);transition:opacity .8s ease}
@@ -230,7 +227,6 @@ footer .top:hover{color:var(--fg)}
   .hero-fig{width:100%;max-width:360px}
   h1{white-space:normal;font-size:clamp(2.5rem,11vw,3.4rem)}
   .lead{font-size:1.18rem}
-  .meta>div{grid-template-columns:92px 1fr}
   section,.fm-viz{grid-template-columns:1fr;row-gap:20px;padding:44px 0 8px}
   .fm-dist{height:150px}
   h2{position:static}
@@ -277,11 +273,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
     <h1>Guangxun Zhang</h1>
     <p class="lead">I am a senior at NYU (expected May 2027) studying Honors Mathematics and Computer Science. My research mainly focuses on generative modeling and representation learning. I am currently a research intern in the <a href="https://huggingface.co/nyu-visionx">VISIONx</a> lab at NYU, led by <a href="https://www.sainingxie.com/">Prof. Saining Xie</a>. Previously, I was a visiting research intern at Rutgers University, supervised by <a href="https://www.ruixiangtang.net">Prof. Ruixiang Tang</a>.</p>
     <div class="status"><span class="dot" aria-hidden="true"></span><div><p class="st-h">Open to PhD positions starting in 2027</p><p class="st-b">If you are interested in working with me, please feel free to <a href="mailto:gz2260@nyu.edu">contact me</a>.</p></div></div>
-    <dl class="meta">
-      <div><dt>Education</dt><dd>B.A. Honors Mathematics &amp; B.A. Honors Computer Science, NYU</dd></div>
-      <div><dt>Research</dt><dd>Generative Modeling &middot; Representation Learning</dd></div>
-      <div><dt>Contact</dt><dd class="links"><a href="mailto:gz2260@nyu.edu">Email</a><a href="assets/Guangxun_Zhang_CV.pdf">CV</a><a href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en">Google Scholar</a></dd></div>
-    </dl>
+    <p class="links contact"><a href="mailto:gz2260@nyu.edu">Email</a><a href="assets/Guangxun_Zhang_CV.pdf">CV</a><a href="https://scholar.google.com/citations?user=SQeDg7EAAAAJ&amp;hl=en">Google Scholar</a></p>
   </div>
   <figure class="hero-fig">
     <div class="photo" id="photo" title="Click to replay"><img src="assets/photo-bangkok.jpg" alt="Portrait of Guangxun Zhang" width="612" height="900"><canvas class="fm" id="fm" aria-hidden="true"></canvas></div>
@@ -366,7 +358,7 @@ try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribu
   <ul class="list">
     <li><b>Computer Science Prize for Academic Excellence</b><span class="d">2025&ndash;2026</span><span class="m">Awarded to one student per year by the NYU Department of Computer Science.</span></li>
     <li><b>Presidential Honors Scholar</b><span class="d">2024, 2025, 2026</span><span class="m">Top 10% of the entering first-year class.</span></li>
-    <li><b>Summer Undergraduate Research Experience Grant <span class="amt">($4,400)</span></b><span class="d">2026</span><span class="m">One of ~12&ndash;14 students annually in a competitive interdisciplinary mathematics research program.</span></li>
+    <li><b>Summer Undergraduate Research Experience Grant <span class="amt">($4,400)</span></b><span class="d">2026</span><span class="m">One of 7 students annually in a competitive interdisciplinary mathematics research program.</span></li>
     <li><b>Dean's Undergraduate Research Fund Grant <span class="amt">($2,000)</span></b><span class="d">2025</span><span class="m">For demonstrating the skills required to conduct an independent research project.</span></li>
   </ul>
   </div>
